@@ -194,6 +194,11 @@ export default function App() {
                 Stop
               </button>
             )}
+            {capture.status === 'stopped' && (
+              <button className={`${button} border border-neutral-300`} onClick={capture.reset}>
+                New lecture
+              </button>
+            )}
           </>
         )}
         <label className="ml-auto flex items-center gap-1.5 text-sm text-neutral-600">

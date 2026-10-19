@@ -49,6 +49,16 @@ def test_results_round_trip_in_seq_order(tmp_path: Path) -> None:
     assert (tmp_path / "sessions" / session_id / "00002.webm").read_bytes() == b"two"
 
 
+def test_latest_result_before(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path)
+    session_id = store.create("", [])
+    for seq in (1, 2, 5):
+        store.save_result(session_id, result(seq, f"chunk {seq}"))
+    assert store.latest_result_before(session_id, 1) is None
+    assert store.latest_result_before(session_id, 4).segments[0].text == "chunk 2"
+    assert store.latest_result_before(session_id, 9).segments[0].text == "chunk 5"
+
+
 @pytest.mark.parametrize("bad", ["../../etc", "nope", "00000000-0000-0000-0000-000000000000"])
 def test_unknown_or_unsafe_session_ids_are_not_found(tmp_path: Path, bad: str) -> None:
     store = SessionStore(tmp_path)

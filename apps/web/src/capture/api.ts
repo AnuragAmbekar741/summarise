@@ -1,4 +1,5 @@
 /** Client for the stage 0 proof API (`/api/proof`). */
+import { audioExtension } from './audio-file'
 import type { ChunkRow, TranscriptSegment } from './db'
 
 export class HttpError extends Error {
@@ -24,7 +25,11 @@ export type ChunkResponse = {
 
 type Fetch = typeof fetch
 
-const EXTENSIONS: Record<string, string> = { webm: 'webm', ogg: 'ogg', mp4: 'm4a' }
+/**
+ * A chunk is at most 8 MB; on a working connection it uploads and transcribes
+ * in a few seconds. Past this the socket is treated as dead and the queue retries.
+ */
+export const UPLOAD_TIMEOUT_MS = 30_000
 
 export async function createSession(
   label: string,
@@ -44,10 +49,10 @@ export async function uploadChunk(
   row: ChunkRow,
   fetchFn: Fetch = fetch,
   now: () => number = Date.now,
+  timeoutMs: number = UPLOAD_TIMEOUT_MS,
 ): Promise<ChunkResponse> {
-  const subtype = row.mime.split(';')[0].split('/')[1] ?? 'webm'
   const form = new FormData()
-  form.append('file', row.blob, `${row.seq}.${EXTENSIONS[subtype] ?? subtype}`)
+  form.append('file', row.blob, `${row.seq}.${audioExtension(row.mime)}`)
   form.append('seq', String(row.seq))
   form.append('start_ms', String(row.startMs))
   form.append('duration_ms', String(row.durationMs))
@@ -57,6 +62,7 @@ export async function uploadChunk(
   const response = await fetchFn(`/api/proof/sessions/${row.sessionId}/chunks`, {
     method: 'POST',
     body: form,
+    signal: AbortSignal.timeout(timeoutMs),
   })
   const body = await json(response)
   return {

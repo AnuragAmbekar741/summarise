@@ -75,6 +75,14 @@ def test_prompt_uses_latest_earlier_chunk(store: SessionStore) -> None:
     assert later.calls[0][2] == "first part"
 
 
+def test_long_chunk_from_a_stalled_cutter_is_still_transcribed(store: SessionStore) -> None:
+    session_id = store.create("", [])
+    result = transcribe_chunk(
+        store, FakeTranscriber(Segment(0, 1, "ok")), session_id, upload(duration_ms=90_000)
+    )
+    assert [s.text for s in result.segments] == ["ok"]
+
+
 def test_same_upload_returns_stored_result_without_transcribing(store: SessionStore) -> None:
     session_id = store.create("", [])
     fake = FakeTranscriber(Segment(0, 2, "hello"))
@@ -95,7 +103,7 @@ def test_same_seq_with_other_audio_conflicts(store: SessionStore) -> None:
     "overrides",
     [
         {"sha256": "0" * 64},
-        {"duration_ms": 61_000},
+        {"duration_ms": 3 * 60 * 60 * 1000},
         {"duration_ms": 0},
         {"mime": "video/mp4"},
         {"data": b"", "sha256": hashlib.sha256(b"").hexdigest()},

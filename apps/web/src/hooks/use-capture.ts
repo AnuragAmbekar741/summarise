@@ -54,6 +54,8 @@ export function useCapture() {
       setChunks([])
       setQueue(EMPTY_QUEUE)
       setStatus('starting')
+      await session.current?.close()
+      session.current = null
       try {
         const next = await CaptureSession.open({
           ...options,
@@ -64,6 +66,7 @@ export function useCapture() {
             onTranscribed: upsert,
             onQueue: setQueue,
             onState: setStatus,
+            onError: (e) => setError(`Recording stopped: ${e.message}. Chunks so far are kept.`),
           },
         })
         session.current = next
@@ -84,6 +87,14 @@ export function useCapture() {
     setElapsedMs(session.current?.elapsedMs() ?? 0)
   }, [])
 
+  /** Back to the setup screen; the finished session keeps uploading until replaced. */
+  const reset = useCallback(() => {
+    setStatus('idle')
+    setElapsedMs(0)
+    setLevel(SILENT_LEVEL)
+    setError(null)
+  }, [])
+
   const sessionRow = useCallback(
     async (): Promise<SessionRow | undefined> => (sessionId ? db.sessions.get(sessionId) : undefined),
     [db, sessionId],
@@ -101,6 +112,7 @@ export function useCapture() {
     pause,
     resume,
     stop,
+    reset,
     sessionRow,
   }
 }

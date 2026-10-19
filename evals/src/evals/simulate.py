@@ -22,7 +22,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from api.modules.proof.service import ChunkUpload, TranscriptionFailed, transcribe_chunk
-from api.modules.proof.storage import SessionStore
+from api.modules.proof.storage import SessionNotFound, SessionStore
 from evals.audio import BYTES_PER_MS, decode, ffmpeg
 from evals.corpus import CORPUS_DIR, DATA_DIR
 from evals.cutter import CutterConfig, SilenceCutter
@@ -116,9 +116,8 @@ def simulate(slug: str, window: tuple[int, int], corpus_dir: Path, data_dir: Pat
 
     window_file = folder / "reference-window.json"
     store = SessionStore(data_dir)
-    if window_file.exists():
-        session_id = json.loads(window_file.read_text())["session"]
-    else:
+    session_id = existing_session(window_file, store)
+    if session_id is None:
         vocabulary = (folder / "vocabulary.txt").read_text().split()
         session_id = store.create(slug, vocabulary)
 
@@ -165,6 +164,18 @@ def simulate(slug: str, window: tuple[int, int], corpus_dir: Path, data_dir: Pat
     }
     (folder / "simulation.json").write_text(json.dumps(report, indent=1) + "\n")
     return report
+
+
+def existing_session(window_file: Path, store: SessionStore) -> str | None:
+    """The session a previous run recorded, if its data folder still exists."""
+    if not window_file.exists():
+        return None
+    session_id = json.loads(window_file.read_text())["session"]
+    try:
+        store.meta(session_id)
+    except SessionNotFound, FileNotFoundError:
+        return None  # .data was cleaned; start a fresh session
+    return session_id
 
 
 def _with_retries(call, seq: int) -> None:

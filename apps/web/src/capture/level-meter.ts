@@ -38,6 +38,25 @@ export function toDb(rms: number): number {
   return rms > 0 ? Math.max(MIN_DB, 20 * Math.log10(rms)) : MIN_DB
 }
 
+/**
+ * Resume the context now, and again on the next click or key press if the
+ * browser's autoplay policy kept it suspended (a page opened without a gesture).
+ */
+async function resumeOnGesture(context: AudioContext): Promise<void> {
+  void context.resume()
+  if (context.state === 'running') return
+  const retry = () => {
+    if (context.state !== 'closed') void context.resume()
+    if (context.state === 'running' || context.state === 'closed') {
+      for (const type of GESTURES) document.removeEventListener(type, retry, true)
+    }
+  }
+  for (const type of GESTURES) document.addEventListener(type, retry, true)
+  context.addEventListener('statechange', retry)
+}
+
+const GESTURES = ['pointerdown', 'keydown', 'touchend'] as const
+
 export class LevelMeter {
   private readonly stream: MediaStream
   private readonly intervalMs: number
@@ -68,7 +87,7 @@ export class LevelMeter {
     const mute = context.createGain()
     mute.gain.value = 0
     source.connect(node).connect(mute).connect(context.destination)
-    await context.resume()
+    await resumeOnGesture(context)
   }
 
   async stop(): Promise<void> {

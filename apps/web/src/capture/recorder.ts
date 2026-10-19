@@ -29,6 +29,7 @@ export type RecorderLike = {
   stop(): void
   ondataavailable: ((event: { data: Blob }) => void) | null
   onstop: (() => void) | null
+  onerror: ((event: { error?: unknown }) => void) | null
 }
 
 export type MakeRecorder = (
@@ -51,6 +52,7 @@ export class ChunkRecorder {
   private readonly stream: MediaStream
   private readonly mime: string
   private readonly onChunk: (chunk: RecordedChunk) => void
+  private readonly onError: (error: Error) => void
   private readonly make: MakeRecorder
   private readonly now: () => number
   private current: Active | null = null
@@ -60,11 +62,18 @@ export class ChunkRecorder {
     stream: MediaStream,
     mime: string,
     onChunk: (chunk: RecordedChunk) => void,
-    options: { firstSeq?: number; make?: MakeRecorder; now?: () => number } = {},
+    options: {
+      firstSeq?: number
+      make?: MakeRecorder
+      now?: () => number
+      /** A MediaRecorder error, or a start that threw (for example after the track ended). */
+      onError?: (error: Error) => void
+    } = {},
   ) {
     this.stream = stream
     this.mime = mime
     this.onChunk = onChunk
+    this.onError = options.onError ?? (() => {})
     this.make = options.make ?? browserRecorder
     this.now = options.now ?? Date.now
     this.seq = options.firstSeq ?? 1
@@ -88,7 +97,17 @@ export class ChunkRecorder {
   cut(atMs: number, reason: CutReason): void {
     const previous = this.current
     if (!previous) return
-    this.current = this.begin(atMs)
+    let next: Active | null = null
+    try {
+      next = this.begin(atMs)
+    } catch (error) {
+      // The stream is unusable (device gone); keep what was recorded so far.
+      this.current = null
+      this.finish(previous, atMs, 'stop')
+      this.onError(error instanceof Error ? error : new Error(String(error)))
+      return
+    }
+    this.current = next
     this.finish(previous, atMs, reason)
   }
 
@@ -110,6 +129,10 @@ export class ChunkRecorder {
     recorder.ondataavailable = (event) => {
       if (event.data.size > 0) active.parts.push(event.data)
     }
+    recorder.onerror = (event) => {
+      const cause = event.error
+      this.onError(cause instanceof Error ? cause : new Error('recording failed'))
+    }
     recorder.start()
     return active
   }
@@ -126,6 +149,11 @@ export class ChunkRecorder {
         blob: new Blob(active.parts, { type: this.mime }),
         mime: this.mime,
       })
-    active.recorder.stop()
+    try {
+      active.recorder.stop()
+    } catch {
+      // Already inactive (the track ended): deliver whatever was captured.
+      active.recorder.onstop()
+    }
   }
 }

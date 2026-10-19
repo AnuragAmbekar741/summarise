@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { ChunkRecorder, pickMime, type RecordedChunk, type RecorderLike } from './recorder'
 
 /** Fake MediaRecorder: delivers one blob and fires onstop asynchronously, like the browser. */
-function fakes() {
+function fakes(failFrom: number | null = null) {
   const log: string[] = []
   let made = 0
   const make = () => {
@@ -10,7 +10,11 @@ function fakes() {
     const recorder: RecorderLike = {
       ondataavailable: null,
       onstop: null,
-      start: () => log.push(`start ${id}`),
+      onerror: null,
+      start: () => {
+        if (failFrom !== null && id >= failFrom) throw new DOMException('track ended', 'InvalidStateError')
+        log.push(`start ${id}`)
+      },
       stop: () => {
         log.push(`stop ${id}`)
         queueMicrotask(() => {
@@ -81,6 +85,27 @@ describe('ChunkRecorder', () => {
     const recorder = new ChunkRecorder(stream, 'audio/webm', () => {}, { make })
     recorder.start(0)
     expect(() => recorder.start(1)).toThrow()
+  })
+})
+
+describe('ChunkRecorder on a dead stream', () => {
+  it('keeps the current chunk and reports the error when the next start throws', async () => {
+    const { make } = fakes(2) // the second recorder cannot start: the track ended
+    const chunks: RecordedChunk[] = []
+    const errors: Error[] = []
+    const recorder = new ChunkRecorder(stream, 'audio/webm', (c) => chunks.push(c), {
+      make,
+      onError: (e) => errors.push(e),
+    })
+
+    recorder.start(0)
+    recorder.cut(30_000, 'silence')
+    await flush()
+
+    expect(errors).toHaveLength(1)
+    expect(errors[0].name).toBe('InvalidStateError')
+    expect(recorder.recording).toBe(false)
+    expect(chunks.map((c) => [c.seq, c.reason])).toEqual([[1, 'stop']])
   })
 })
 

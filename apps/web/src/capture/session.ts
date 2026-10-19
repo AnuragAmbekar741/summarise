@@ -21,6 +21,8 @@ export type CaptureEvents = {
   onTranscribed?: (row: ChunkRow) => void
   onQueue?: (state: QueueState) => void
   onState?: (state: CaptureState) => void
+  /** Recording cannot continue: the device was lost or the recorder failed. */
+  onError?: (error: Error) => void
 }
 
 export type CaptureOptions = {
@@ -58,6 +60,7 @@ export class CaptureSession {
   private stateValue: CaptureState = 'ready'
 
   private readonly onOnline = () => this.queue.wake()
+  private readonly onTrackEnded = () => void this.fail(new Error('The microphone was disconnected'))
 
   static async open(options: CaptureOptions): Promise<CaptureSession> {
     const mime = pickMime()
@@ -67,18 +70,25 @@ export class CaptureSession {
       (await navigator.mediaDevices.getUserMedia({
         audio: { ...MIC_CONSTRAINTS, deviceId: options.deviceId ? { exact: options.deviceId } : undefined },
       }))
-    const sessionId = await createSession(options.label, options.vocabulary)
-    const db = options.db ?? openCaptureDb()
-    await db.sessions.put({
-      id: sessionId,
-      label: options.label,
-      vocabulary: options.vocabulary,
-      startedAt: Date.now(),
-      status: 'recording',
-      mime,
-    })
-    await navigator.storage?.persist?.()
-    return new CaptureSession(sessionId, mime, db, stream, !options.stream, options)
+    const ownsStream = !options.stream
+    try {
+      const sessionId = await createSession(options.label, options.vocabulary)
+      const db = options.db ?? openCaptureDb()
+      await db.sessions.put({
+        id: sessionId,
+        label: options.label,
+        vocabulary: options.vocabulary,
+        startedAt: Date.now(),
+        status: 'recording',
+        mime,
+      })
+      await navigator.storage?.persist?.()
+      return new CaptureSession(sessionId, mime, db, stream, ownsStream, options)
+    } catch (error) {
+      // The microphone was opened above; a failed API call must not leave it on.
+      if (ownsStream) stream.getTracks().forEach((track) => track.stop())
+      throw error
+    }
   }
 
   private constructor(
@@ -97,7 +107,9 @@ export class CaptureSession {
     this.events = options.events ?? {}
     this.cutter = new SilenceCutter(options.cutter)
     this.meter = new LevelMeter(stream)
-    this.recorder = new ChunkRecorder(stream, mime, (chunk) => void this.store(chunk))
+    this.recorder = new ChunkRecorder(stream, mime, (chunk) => void this.store(chunk), {
+      onError: (error) => void this.fail(error),
+    })
     this.queue = new UploadQueue({
       db,
       sessionId,
@@ -121,14 +133,23 @@ export class CaptureSession {
 
   async start(): Promise<void> {
     if (this.stateValue !== 'ready') return
-    this.clock.start()
-    this.cutter.startChunk(0)
-    this.recorder.start(0)
-    this.setState('recording')
-    await this.meter.start((db) => this.onLevel(db))
-    await this.wakeLock.acquire()
-    window.addEventListener('online', this.onOnline)
-    await this.queue.start()
+    try {
+      // The meter comes first: without level samples nothing would ever cut.
+      await this.meter.start((db) => this.onLevel(db))
+      this.clock.start()
+      this.cutter.startChunk(0)
+      this.recorder.start(0)
+      this.setState('recording')
+      await this.wakeLock.acquire()
+      window.addEventListener('online', this.onOnline)
+      for (const track of this.stream.getAudioTracks()) {
+        track.addEventListener('ended', this.onTrackEnded)
+      }
+      await this.queue.start()
+    } catch (error) {
+      await this.release()
+      throw error
+    }
   }
 
   pause(): void {
@@ -155,15 +176,31 @@ export class CaptureSession {
     if (this.stateValue === 'recording') this.endChunk('stop')
     this.clock.pause()
     this.setState('stopped')
+    await this.release()
+    await this.db.sessions.update(this.sessionId, { status: 'stopped' })
+  }
+
+  /** Recording cannot go on: keep what was captured, stop, and tell the page. */
+  private async fail(error: Error): Promise<void> {
+    if (this.stateValue === 'stopped') return
+    await this.stop()
+    this.events.onError?.(error)
+  }
+
+  /** Give back the microphone, the audio graph and the wake lock. Safe to call twice. */
+  private async release(): Promise<void> {
+    window.removeEventListener('online', this.onOnline)
+    for (const track of this.stream.getAudioTracks()) {
+      track.removeEventListener('ended', this.onTrackEnded)
+    }
     await this.meter.stop()
     await this.wakeLock.release()
     if (this.ownsStream) this.stream.getTracks().forEach((track) => track.stop())
-    await this.db.sessions.update(this.sessionId, { status: 'stopped' })
   }
 
   /** Stop the upload queue; anything still pending stays in IndexedDB. */
   async close(): Promise<void> {
-    window.removeEventListener('online', this.onOnline)
+    await this.release()
     await this.queue.stop()
   }
 

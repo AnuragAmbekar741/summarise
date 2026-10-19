@@ -8,13 +8,18 @@ from evals.corpus import Lecture, Segment, Session, in_window
 from evals.metrics import percentile
 from evals.normalize import normalize
 from evals.providers import Hypothesis
-from evals.scoring import boundary_errors, vocabulary_recall, word_error_rate
+from evals.scoring import (
+    baseline_error_rate,
+    boundary_errors,
+    vocabulary_recall,
+    word_error_rate,
+)
 
 # Stage 0 exit gates (docs/plans/stage-0-proof.md)
 GATE_WER = 0.15
 GATE_WER_WITH_MIC = 0.25
 GATE_TERM_RECALL = 0.85
-GATE_BOUNDARY_PER_10_CUTS = 1.0
+GATE_BOUNDARY_PER_10_CUTS = 1.0  # errors caused by cuts: near-cut rate minus baseline
 
 
 @dataclass
@@ -27,10 +32,14 @@ class Score:
     reference_words: int
     reference_span: list[int]
     term_recall: float | None
+    term_occurrences: int
+    terms_found: int
     missed_terms: list[str]
     cuts_in_window: int | None
     boundary_errors: int | None
-    boundary_errors_per_10_cuts: float | None
+    boundary_error_rate: float | None
+    baseline_error_rate: float | None
+    boundary_excess_per_10_cuts: float | None
     dropped_per_100_chunks: float | None
     student_turns_labelled: float | None
     latency_p50_ms: int | None
@@ -101,6 +110,8 @@ def score(
 
     chunked = hypothesis.chunks is not None
     errors = boundary_errors(alignment, boundaries) if chunked else None
+    cut_rate = errors / len(boundaries) if chunked and boundaries and errors is not None else None
+    base_rate = baseline_error_rate(alignment, len(words), boundaries) if chunked else None
     first_start = session.chunks[0].start_ms if session.chunks else 0
     covered_hours = (session.duration_ms - first_start) / 3_600_000
     p50 = percentile(hypothesis.latencies_ms, 0.5)
@@ -115,11 +126,17 @@ def score(
         reference_words=wer.reference_words,
         reference_span=[span[0], span[1]],
         term_recall=None if recall is None else round(recall, 4),
+        term_occurrences=sum(c.in_reference for c in counts),
+        terms_found=sum(min(c.in_reference, c.in_hypothesis) for c in counts),
         missed_terms=[c.term for c in counts if c.in_hypothesis < c.in_reference],
         cuts_in_window=len(boundaries) if chunked else None,
         boundary_errors=errors,
-        boundary_errors_per_10_cuts=(
-            round(10 * errors / len(boundaries), 2) if chunked and boundaries else None
+        boundary_error_rate=None if cut_rate is None else round(cut_rate, 4),
+        baseline_error_rate=None if base_rate is None else round(base_rate, 4),
+        boundary_excess_per_10_cuts=(
+            round(10 * (cut_rate - base_rate), 2)
+            if cut_rate is not None and base_rate is not None
+            else None
         ),
         dropped_per_100_chunks=(
             round(100 * hypothesis.dropped / hypothesis.chunks, 1) if hypothesis.chunks else None
@@ -170,8 +187,10 @@ def gate_notes(s: Score) -> list[str]:
     if s.term_recall is not None and s.term_recall <= GATE_TERM_RECALL:
         notes.append(f"term recall {s.term_recall:.0%} under 85%")
     if (
-        s.boundary_errors_per_10_cuts is not None
-        and s.boundary_errors_per_10_cuts >= GATE_BOUNDARY_PER_10_CUTS
+        s.boundary_excess_per_10_cuts is not None
+        and s.boundary_excess_per_10_cuts >= GATE_BOUNDARY_PER_10_CUTS
     ):
-        notes.append(f"{s.boundary_errors_per_10_cuts} boundary errors per 10 cuts (gate under 1)")
+        notes.append(
+            f"cuts add {s.boundary_excess_per_10_cuts} errors per 10 cuts over baseline (gate under 1)"
+        )
     return notes

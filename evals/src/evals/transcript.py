@@ -83,8 +83,8 @@ def table(scores: list[Score]) -> str:
 
     rows = [
         (
-            "| Config | WER | sub/del/ins | Term recall | Cut errors per 10 | Dropped per 100"
-            " chunks | Student turns labelled | Latency p50 / p95 | $ per lecture hour | Gates |"
+            "| Config | WER | sub/del/ins | Terms found | Cut errors over baseline per 10 | Dropped"
+            " per 100 chunks | Student turns labelled | Latency p50 / p95 | $ per lecture hour | Gates |"
         ),
         "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
@@ -97,7 +97,7 @@ def table(scores: list[Score]) -> str:
         )
         rows.append(
             f"| {s.config} | {pct(s.wer)} | {s.substitutions}/{s.deletions}/{s.insertions}"
-            f" | {pct(s.term_recall)} | {num(s.boundary_errors_per_10_cuts)}"
+            f" | {s.terms_found}/{s.term_occurrences} | {num(s.boundary_excess_per_10_cuts)}"
             f" | {num(s.dropped_per_100_chunks)} | {pct(s.student_turns_labelled)}"
             f" | {latency} | {cost} | {'; '.join(gate_notes(s)) or 'pass'} |"
         )

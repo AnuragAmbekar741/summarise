@@ -35,6 +35,7 @@ def test_score_live_chunks(data_dir: Path, corpus_dir: Path) -> None:
     assert s.cuts_in_window == 1
     assert s.boundary_errors == 1  # the missing question sits right at the cut
     assert s.term_recall == pytest.approx(3 / 4)  # one F1 score occurrence missing
+    assert (s.terms_found, s.term_occurrences) == (3, 4)
     assert s.missed_terms == ["f1 score"]
     assert s.dropped_per_100_chunks == pytest.approx(33.3)
     assert s.latency_p50_ms == 302
@@ -79,7 +80,11 @@ def test_gate_notes_flag_failures(data_dir: Path, corpus_dir: Path) -> None:
     notes = gate_notes(s)
     assert any("WER" in n for n in notes)
     assert any("term recall" in n for n in notes)
-    assert any("boundary" in n for n in notes)
+    # One cut with an error next to it, but the window is too short for a baseline,
+    # so no claim is made about cuts causing errors.
+    assert s.boundary_error_rate == 1.0
+    assert s.baseline_error_rate is None
+    assert not any("cuts add" in n for n in notes)
 
 
 def test_align_span_finds_the_window_inside_a_full_transcript() -> None:

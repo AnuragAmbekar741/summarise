@@ -26,7 +26,12 @@ def normalize(text: str) -> list[str]:
     text = re.sub(r"(?<=\d)\.(?=\d)", "point", text)  # 0.5 -> 0point5, kept as one token
     text = text.replace("'", "").replace("’", "")  # don't -> dont
     text = re.sub(r"[^a-z0-9]+", " ", text)
-    return _merge_numbers(text.split())
+    return [_us_spelling(w) for w in _merge_numbers(text.split())]
+
+
+def _us_spelling(word: str) -> str:
+    """summarises -> summarizes, normalisation -> normalization (applied to both sides)."""
+    return re.sub(r"(?<=\w{2})is(e|es|ed|ing|ation|ations)$", r"iz\1", word)
 
 
 def _merge_numbers(words: list[str]) -> list[str]:

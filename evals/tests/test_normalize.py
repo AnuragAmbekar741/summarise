@@ -21,6 +21,8 @@ from evals.normalize import normalize
         ("and then", ["and", "then"]),
         ("one and two", ["1", "and", "2"]),
         ("the F1 score", ["the", "f1", "score"]),
+        ("summarises", ["summarizes"]),
+        ("normalisation organised", ["normalization", "organized"]),
     ],
 )
 def test_normalize(text: str, tokens: list[str]) -> None:

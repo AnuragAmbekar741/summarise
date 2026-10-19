@@ -1,4 +1,5 @@
 /** Client for the stage 0 proof API (`/api/proof`). */
+import { audioExtension } from './audio-file'
 import type { ChunkRow, TranscriptSegment } from './db'
 
 export class HttpError extends Error {
@@ -30,8 +31,6 @@ type Fetch = typeof fetch
  */
 export const UPLOAD_TIMEOUT_MS = 30_000
 
-const EXTENSIONS: Record<string, string> = { webm: 'webm', ogg: 'ogg', mp4: 'm4a' }
-
 export async function createSession(
   label: string,
   vocabulary: string[],
@@ -52,9 +51,8 @@ export async function uploadChunk(
   now: () => number = Date.now,
   timeoutMs: number = UPLOAD_TIMEOUT_MS,
 ): Promise<ChunkResponse> {
-  const subtype = row.mime.split(';')[0].split('/')[1] ?? 'webm'
   const form = new FormData()
-  form.append('file', row.blob, `${row.seq}.${EXTENSIONS[subtype] ?? subtype}`)
+  form.append('file', row.blob, `${row.seq}.${audioExtension(row.mime)}`)
   form.append('seq', String(row.seq))
   form.append('start_ms', String(row.startMs))
   form.append('duration_ms', String(row.durationMs))

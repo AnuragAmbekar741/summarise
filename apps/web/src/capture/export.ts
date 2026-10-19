@@ -3,6 +3,7 @@
  * browser's own audio copy (chunk files + report) for re-running the eval.
  */
 import { strToU8, zipSync } from 'fflate'
+import { audioExtension } from './audio-file'
 import type { ChunkRow, SessionRow } from './db'
 import { chunkMetrics, summarize } from './metrics'
 
@@ -32,11 +33,8 @@ export function sessionReport(
   }
 }
 
-const EXTENSIONS: Record<string, string> = { webm: 'webm', ogg: 'ogg', mp4: 'm4a' }
-
 export function chunkFileName(row: ChunkRow): string {
-  const subtype = row.mime.split(';')[0].split('/')[1] ?? 'webm'
-  return `${String(row.seq).padStart(5, '0')}.${EXTENSIONS[subtype] ?? subtype}`
+  return `${String(row.seq).padStart(5, '0')}.${audioExtension(row.mime)}`
 }
 
 /** Zip of every non-empty chunk plus `session.json`. Audio is stored, not recompressed. */

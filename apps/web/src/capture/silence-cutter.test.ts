@@ -108,6 +108,22 @@ describe('SilenceCutter', () => {
     expect(cutter.floorDb).toBeGreaterThan(-45)
   })
 
+  it('still finds pauses when digital silence drags the floor to -100 dB', () => {
+    // Measured in the browser: synthetic audio with exact-zero gaps set the
+    // threshold to -94 dB, so -60 dB pauses between sentences never counted.
+    const cutter = new SilenceCutter()
+    cutter.startChunk(0)
+    const level = (t: number) => {
+      if (t < 5_000) return -100 // digital silence before speech starts
+      if (t >= 31_000 && t < 31_500) return -60 // a sentence pause
+      return t % 1000 < 850 ? SPEECH : -100
+    }
+    const decisions = feed(cutter, 0, 40_000, level)
+    expect(decisions).toHaveLength(1)
+    expect(decisions[0].decision).toBe('cut')
+    expect(cutter.thresholdDb).toBeGreaterThan(-60)
+  })
+
   it('keeps chunk stats per chunk', () => {
     const cutter = new SilenceCutter()
     cutter.startChunk(0)

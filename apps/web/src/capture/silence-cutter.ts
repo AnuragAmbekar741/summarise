@@ -5,7 +5,9 @@
  * percentile of the same window, held as a peak that decays slowly, so a long
  * break still has a speech reference. A sample is silent when it is under
  * floor + margin and at least `minContrastDb` under the speech level, so
- * nonstop speech never reads as silence.
+ * nonstop speech never reads as silence. The threshold never sinks more than
+ * `maxContrastDb` under speech: stretches of digital silence (-100 dB) would
+ * otherwise drag the floor down until real pauses no longer count.
  *
  * After `minChunkMs`, the chunk is cut at the end of the first silent run of
  * `silenceWindowMs`; at `maxChunkMs` it is cut regardless. Cutting in silence means no word is split, so chunks need no overlap.
@@ -22,6 +24,7 @@ export type CutterConfig = {
   marginDb: number
   speechPercentile: number
   minContrastDb: number
+  maxContrastDb: number
   speechDecayDbPerSec: number
   silentShare: number
 }
@@ -35,6 +38,7 @@ export const DEFAULT_CUTTER: CutterConfig = {
   marginDb: 6,
   speechPercentile: 0.9,
   minContrastDb: 10,
+  maxContrastDb: 35,
   speechDecayDbPerSec: 1 / 30,
   silentShare: 0.95,
 }
@@ -72,7 +76,9 @@ export class SilenceCutter {
   }
 
   get thresholdDb(): number {
-    return Math.min(this.floor + this.config.marginDb, this.speech - this.config.minContrastDb)
+    const { marginDb, minContrastDb, maxContrastDb } = this.config
+    const fromFloor = Math.max(this.floor + marginDb, this.speech - maxContrastDb)
+    return Math.min(fromFloor, this.speech - minContrastDb)
   }
 
   /** Begin a new chunk at `t`. The noise-floor history is kept across chunks. */

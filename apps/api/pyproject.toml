@@ -1,0 +1,25 @@
+[project]
+name = "api"
+version = "0.1.0"
+description = "FastAPI app: proof endpoints in stage 0, the product API later"
+readme = "README.md"
+authors = [
+    { name = "AnuragAmbekar741", email = "anuragambekar1997@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi[standard]>=0.146.0",
+    "pydantic-settings>=2.16.0",
+    "speech",
+]
+
+
+[build-system]
+requires = ["uv_build>=0.10.9,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.uv.sources]
+speech = { workspace = true }
+
+[tool.fastapi]
+entrypoint = "api.main:app"

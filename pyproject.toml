@@ -1,0 +1,30 @@
+[project]
+name = "summarise"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = []
+
+[tool.uv.workspace]
+members = [
+    "apps/api",
+    "packages/speech",
+    "evals",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests", "packages/speech/tests", "evals/tests"]
+markers = [
+    "live: calls a real provider API (costs money, needs keys)",
+]
+addopts = "-m 'not live'"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"

@@ -57,6 +57,7 @@ class Lecture:
     slug: str
     folder: Path
     reference: str
+    turns: list[tuple[str, str]]  # (label, text); label is "Student", "Instructor" or ""
     student_turns: list[str]
     session_id: str
     start_ms: int
@@ -85,17 +86,20 @@ def load_session(session_id: str, data_dir: Path = DATA_DIR) -> Session:
 def load_lecture(slug: str, corpus_dir: Path = CORPUS_DIR) -> Lecture:
     folder = corpus_dir / slug
     window = json.loads((folder / "reference-window.json").read_text())
-    turns, students = [], []
-    for line in (folder / "reference-10min.txt").read_text().splitlines():
+    path = folder / "reference.txt"
+    if not path.exists():
+        path = folder / "reference-10min.txt"
+    turns: list[tuple[str, str]] = []
+    for line in path.read_text().splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
             continue
         speaker, sep, text = line.partition(":")
-        if sep and speaker.strip().lower() in {"student", "instructor"}:
-            line = text.strip()
-            if speaker.strip().lower() == "student":
-                students.append(line)
-        turns.append(line)
+        label = speaker.strip().capitalize() if sep else ""
+        if label in {"Student", "Instructor"}:
+            turns.append((label, text.strip()))
+        else:
+            turns.append(("", line))
     vocabulary_file = folder / "vocabulary.txt"
     vocabulary = (
         [t.strip() for t in vocabulary_file.read_text().splitlines() if t.strip()]
@@ -105,8 +109,9 @@ def load_lecture(slug: str, corpus_dir: Path = CORPUS_DIR) -> Lecture:
     return Lecture(
         slug=slug,
         folder=folder,
-        reference=" ".join(turns),
-        student_turns=students,
+        reference=" ".join(text for _, text in turns),
+        turns=turns,
+        student_turns=[text for label, text in turns if label == "Student"],
         session_id=window["session"],
         start_ms=window["start_ms"],
         end_ms=window["end_ms"],

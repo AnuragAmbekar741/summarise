@@ -1,0 +1,38 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+.pnpm-store/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Local data: recorded chunks, transcripts
+.data/
+
+# Eval audio (references and vocabulary are committed)
+evals/corpus/**/*.webm
+evals/corpus/**/*.ogg
+evals/corpus/**/*.mp4
+evals/corpus/**/*.m4a
+evals/corpus/**/*.wav
+evals/corpus/**/*.mp3
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+.DS_Store

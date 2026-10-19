@@ -1,4 +1,4 @@
-.PHONY: help setup api web dev test test-live lint corpus eval-reference eval-transcript
+.PHONY: help setup api web dev test test-live lint corpus simulate eval-reference eval-transcript
 
 # List targets
 help:
@@ -38,6 +38,11 @@ lint:
 # Download the public lecture corpus (~1 GB, gitignored): make corpus [ARGS="--only <slug>"]
 corpus:
 	uv run --package evals python -m evals.fetch $(ARGS)
+
+# Run corpus lectures through the capture pipeline offline (transcribes the window only):
+# make simulate [ARGS="--only <slug>"]
+simulate:
+	uv run --package evals python -m evals.simulate $(ARGS)
 
 # Draft a reference window to correct by hand:
 # make eval-reference LECTURE=<slug> SESSION=<id> START=12:00 END=22:00

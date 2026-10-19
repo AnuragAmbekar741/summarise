@@ -21,6 +21,8 @@ export type CaptureEvents = {
   onTranscribed?: (row: ChunkRow) => void
   onQueue?: (state: QueueState) => void
   onState?: (state: CaptureState) => void
+  /** Recording cannot continue: the device was lost or the recorder failed. */
+  onError?: (error: Error) => void
 }
 
 export type CaptureOptions = {
@@ -58,6 +60,7 @@ export class CaptureSession {
   private stateValue: CaptureState = 'ready'
 
   private readonly onOnline = () => this.queue.wake()
+  private readonly onTrackEnded = () => void this.fail(new Error('The microphone was disconnected'))
 
   static async open(options: CaptureOptions): Promise<CaptureSession> {
     const mime = pickMime()
@@ -104,7 +107,9 @@ export class CaptureSession {
     this.events = options.events ?? {}
     this.cutter = new SilenceCutter(options.cutter)
     this.meter = new LevelMeter(stream)
-    this.recorder = new ChunkRecorder(stream, mime, (chunk) => void this.store(chunk))
+    this.recorder = new ChunkRecorder(stream, mime, (chunk) => void this.store(chunk), {
+      onError: (error) => void this.fail(error),
+    })
     this.queue = new UploadQueue({
       db,
       sessionId,
@@ -137,6 +142,9 @@ export class CaptureSession {
       this.setState('recording')
       await this.wakeLock.acquire()
       window.addEventListener('online', this.onOnline)
+      for (const track of this.stream.getAudioTracks()) {
+        track.addEventListener('ended', this.onTrackEnded)
+      }
       await this.queue.start()
     } catch (error) {
       await this.release()
@@ -172,9 +180,19 @@ export class CaptureSession {
     await this.db.sessions.update(this.sessionId, { status: 'stopped' })
   }
 
+  /** Recording cannot go on: keep what was captured, stop, and tell the page. */
+  private async fail(error: Error): Promise<void> {
+    if (this.stateValue === 'stopped') return
+    await this.stop()
+    this.events.onError?.(error)
+  }
+
   /** Give back the microphone, the audio graph and the wake lock. Safe to call twice. */
   private async release(): Promise<void> {
     window.removeEventListener('online', this.onOnline)
+    for (const track of this.stream.getAudioTracks()) {
+      track.removeEventListener('ended', this.onTrackEnded)
+    }
     await this.meter.stop()
     await this.wakeLock.release()
     if (this.ownsStream) this.stream.getTracks().forEach((track) => track.stop())

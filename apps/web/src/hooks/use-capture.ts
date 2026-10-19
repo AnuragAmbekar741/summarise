@@ -66,6 +66,7 @@ export function useCapture() {
             onTranscribed: upsert,
             onQueue: setQueue,
             onState: setStatus,
+            onError: (e) => setError(`Recording stopped: ${e.message}. Chunks so far are kept.`),
           },
         })
         session.current = next

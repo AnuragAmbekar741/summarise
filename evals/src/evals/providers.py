@@ -44,6 +44,8 @@ class Hypothesis:
     dropped: int
     chunks: int | None = None
     notes: list[str] = field(default_factory=list)
+    # What the phantom filters removed: {"start_ms", "text", "reason"}, for tuning them.
+    dropped_segments: list[dict] = field(default_factory=list)
 
     def cost_usd(self) -> float:
         return self.billed_seconds / 3600 * USD_PER_HOUR[self.config]
@@ -76,6 +78,11 @@ def live_chunks(session: Session) -> Hypothesis:
         latencies_ms=[r["groq_latency_ms"] for r in session.results],
         dropped=sum(len(r["dropped"]) for r in session.results),
         chunks=len(session.results),
+        dropped_segments=[
+            {"start_ms": d["start_ms"], "text": d["text"], "reason": d["reason"]}
+            for r in session.results
+            for d in r["dropped"]
+        ],
     )
 
 
@@ -85,6 +92,7 @@ def rerun_chunks(session: Session, transcribe: Transcribe, config: str) -> Hypot
     audio = billed = 0.0
     latencies: list[int] = []
     dropped = 0
+    dropped_segments: list[dict] = []
     previous = ""
     for chunk in session.chunks:
         prompt = build_prompt(session.vocabulary, previous)
@@ -95,6 +103,7 @@ def rerun_chunks(session: Session, transcribe: Transcribe, config: str) -> Hypot
         billed += _groq_billed(result.audio_seconds)
         latencies.append(result.latency_ms)
         dropped += len(result.dropped)
+        dropped_segments += _dropped(chunk.start_ms, result)
         if kept:
             previous = " ".join(s.text for s in kept)
     return Hypothesis(
@@ -106,6 +115,7 @@ def rerun_chunks(session: Session, transcribe: Transcribe, config: str) -> Hypot
         latencies_ms=latencies,
         dropped=dropped,
         chunks=len(session.chunks),
+        dropped_segments=dropped_segments,
     )
 
 
@@ -118,6 +128,7 @@ def full_file_groq(
     audio = billed = 0.0
     latencies: list[int] = []
     dropped = 0
+    dropped_segments: list[dict] = []
     for index, (path, offset_ms) in enumerate(parts, start=1):
         result = drop_phantoms(transcribe(path, prompt), prompt)
         segments += [_on_clock(index, offset_ms, s) for s in result.segments]
@@ -125,6 +136,7 @@ def full_file_groq(
         billed += _groq_billed(result.audio_seconds)
         latencies.append(result.latency_ms)
         dropped += len(result.dropped)
+        dropped_segments += _dropped(offset_ms, result)
     return Hypothesis(
         config=GROQ_TURBO_FULL,
         segments=segments,
@@ -133,6 +145,7 @@ def full_file_groq(
         requests=len(parts),
         latencies_ms=latencies,
         dropped=dropped,
+        dropped_segments=dropped_segments,
     )
 
 
@@ -153,6 +166,17 @@ def full_file_assemblyai(
         latencies_ms=[result.latency_ms],
         dropped=0,
     )
+
+
+def _dropped(offset_ms: int, result: TranscriptionResult) -> list[dict]:
+    return [
+        {
+            "start_ms": offset_ms + round(d.segment.start * 1000),
+            "text": d.segment.text,
+            "reason": d.reason,
+        }
+        for d in result.dropped
+    ]
 
 
 def _on_clock(seq: int, offset_ms: int, segment) -> Segment:

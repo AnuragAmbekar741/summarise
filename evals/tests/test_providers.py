@@ -41,6 +41,7 @@ def test_live_chunks_reads_stored_results(data_dir: Path) -> None:
     assert h.segments[0].text == "today we cover precision"
     assert h.chunks == 3 and h.requests == 3
     assert h.dropped == 1
+    assert h.dropped_segments == [{"start_ms": 0, "text": "Thank you.", "reason": "stock_phrase"}]
     assert h.latencies_ms == [301, 302, 303]
     assert h.audio_seconds == pytest.approx(83.0)
 
@@ -57,6 +58,11 @@ def test_rerun_chunks_chains_prompts_and_moves_to_lecture_time(data_dir: Path) -
         (3, 70_500, 72_000),
     ]
     assert h.dropped == 3
+    assert h.dropped_segments[1] == {
+        "start_ms": 32_000,
+        "text": "Thank you.",
+        "reason": "stock_phrase",
+    }
     # Groq bills at least 10 s per request: 3 chunks of 4 s bill 30 s.
     assert h.billed_seconds == 30.0
     assert h.cost_usd() == pytest.approx(30 / 3600 * 0.111)

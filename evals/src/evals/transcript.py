@@ -114,11 +114,14 @@ def main(argv: list[str] | None = None) -> None:
     cache = RESULTS_DIR / "cache" / session.id
 
     scores: list[Score] = []
+    dropped: dict[str, list[dict]] = {}
     skipped: dict[str, str] = {}
     for config in args.configs.split(","):
         print(f"running {config} ...", flush=True)
         try:
-            scores.append(score(lecture, session, run(config, session, cache, args.fresh)))
+            hypothesis = run(config, session, cache, args.fresh)
+            scores.append(score(lecture, session, hypothesis))
+            dropped[config] = hypothesis.dropped_segments
         except (FfmpegMissing, MissingKey) as error:
             skipped[config] = str(error)
             print(f"  skipped: {error}")
@@ -136,6 +139,7 @@ def main(argv: list[str] | None = None) -> None:
                 "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
                 "rates_note": RATES_NOTE,
                 "scores": [s.to_json() for s in scores],
+                "dropped_segments": dropped,
                 "skipped": skipped,
             },
             indent=2,

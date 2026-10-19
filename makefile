@@ -1,4 +1,4 @@
-.PHONY: help setup api web dev test test-live lint corpus simulate eval-reference eval-transcript
+.PHONY: help setup api web dev test test-live lint corpus simulate eval-reference eval-transcript eval-summary
 
 # List targets
 help:
@@ -55,3 +55,7 @@ eval-reference:
 eval-transcript:
 	@test -n "$(LECTURE)" || (echo 'Usage: make eval-transcript LECTURE=<slug>' && exit 1)
 	uv run --package evals python -m evals.transcript --lecture $(LECTURE) $(ARGS)
+
+# Pool the latest results of every corpus lecture: writes evals/results/stage0-summary.md
+eval-summary:
+	uv run --package evals python -m evals.summary

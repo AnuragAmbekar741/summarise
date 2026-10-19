@@ -42,6 +42,7 @@ class Score:
     boundary_excess_per_10_cuts: float | None
     dropped_per_100_chunks: float | None
     student_turns_labelled: float | None
+    student_turns_in_window: int
     latency_p50_ms: int | None
     latency_p95_ms: int | None
     cost_usd: float
@@ -142,6 +143,7 @@ def score(
             round(100 * hypothesis.dropped / hypothesis.chunks, 1) if hypothesis.chunks else None
         ),
         student_turns_labelled=student_turns_labelled(students, window, hypothesis.segments),
+        student_turns_in_window=len(students),
         latency_p50_ms=None if p50 is None else round(p50),
         latency_p95_ms=None if p95 is None else round(p95),
         cost_usd=round(hypothesis.cost_usd(), 4),

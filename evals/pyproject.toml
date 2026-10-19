@@ -8,8 +8,11 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "api",
+    "beautifulsoup4>=4.15.0",
     "jiwer>=4.0.0",
     "speech",
+    "wordfreq>=3.1.1",
 ]
 
 
@@ -19,3 +22,4 @@ build-backend = "uv_build"
 
 [tool.uv.sources]
 speech = { workspace = true }
+api = { workspace = true }

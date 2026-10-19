@@ -329,3 +329,7 @@ Resolved 2026-10-18: option (a) for all four.
 ## Outcome
 
 _Filled in when the stage closes: what shipped, gate results, deviations from this plan, notes for stage 1._
+
+### Deviations so far
+
+- **T2 phantom filters (2026-10-18).** Groq returns `no_speech_prob = 0` on every segment, so the planned `no_speech_prob > 0.6` rule never fires. Probed with 30 s of silence, faint noise and hum: without a prompt Whisper emits stock phrases ("Thank you.", "So, let's go."); with a prompt it echoes the prompt ("and the F1 score is the harmonic."), sometimes at normal confidence (`avg_logprob` -0.86). Rules now: `avg_logprob < -1.0`, prompt echo (3+ words, 80%+ found in the prompt), whole-segment stock phrase at any length, `compression_ratio > 2.4`; `no_speech_prob` kept for other providers. The browser's silent-chunk skip (T4) stays the first line of defence.

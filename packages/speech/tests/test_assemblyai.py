@@ -15,6 +15,22 @@ DONE = {
     ],
 }
 
+LONG_TURN = {
+    "speaker": "A",
+    "start": 0,
+    "end": 6000,
+    "text": "First point. Second point? And a tail",
+    "words": [
+        {"text": "First", "start": 0, "end": 400},
+        {"text": "point.", "start": 400, "end": 900},
+        {"text": "Second", "start": 2000, "end": 2400},
+        {"text": "point?", "start": 2400, "end": 3000},
+        {"text": "And", "start": 4000, "end": 4200},
+        {"text": "a", "start": 4200, "end": 4300},
+        {"text": "tail", "start": 4300, "end": 6000},
+    ],
+}
+
 
 def fake_api(statuses: list[dict]) -> tuple[httpx.MockTransport, list[httpx.Request]]:
     seen: list[httpx.Request] = []
@@ -74,3 +90,13 @@ def test_times_out(tmp_path: Path) -> None:
             poll_seconds=0,
             timeout_seconds=0,
         )
+
+
+def test_splits_long_turns_into_sentences(tmp_path: Path) -> None:
+    transport, _ = fake_api([{**DONE, "utterances": [LONG_TURN]}])
+    result = transcribe_file(audio(tmp_path), client=make_client("key", transport), poll_seconds=0)
+    assert [(u.speaker, u.start, u.end, u.text) for u in result.utterances] == [
+        ("A", 0.0, 0.9, "First point."),
+        ("A", 2.0, 3.0, "Second point?"),
+        ("A", 4.0, 6.0, "And a tail"),
+    ]

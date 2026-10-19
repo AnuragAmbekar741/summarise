@@ -84,16 +84,40 @@ def transcribe_file(
         time.sleep(poll_seconds)
 
     return DiarizedTranscript(
-        utterances=[_utterance(u) for u in data.get("utterances") or []],
+        utterances=[s for u in data.get("utterances") or [] for s in _sentences(u)],
         audio_seconds=float(data.get("audio_duration") or 0.0),
         latency_ms=round((time.perf_counter() - started) * 1000),
     )
 
 
-def _utterance(raw: dict[str, Any]) -> Utterance:
+def _sentences(raw: dict[str, Any]) -> list[Utterance]:
+    """One speaker turn split into sentences, using word timings.
+
+    A turn can run for minutes; sentence-sized pieces keep timestamps useful.
+    Turns without word timings are returned whole.
+    """
+    speaker = str(raw["speaker"])
+    words = raw.get("words") or []
+    if not words:
+        return [
+            Utterance(speaker, raw["start"] / 1000, raw["end"] / 1000, str(raw["text"]).strip())
+        ]
+    out: list[Utterance] = []
+    current: list[dict[str, Any]] = []
+    for word in words:
+        current.append(word)
+        if str(word["text"]).rstrip().endswith((".", "?", "!")):
+            out.append(_join(speaker, current))
+            current = []
+    if current:
+        out.append(_join(speaker, current))
+    return out
+
+
+def _join(speaker: str, words: list[dict[str, Any]]) -> Utterance:
     return Utterance(
-        speaker=str(raw["speaker"]),
-        start=raw["start"] / 1000,
-        end=raw["end"] / 1000,
-        text=str(raw["text"]).strip(),
+        speaker=speaker,
+        start=words[0]["start"] / 1000,
+        end=words[-1]["end"] / 1000,
+        text=" ".join(str(w["text"]) for w in words).strip(),
     )

@@ -67,18 +67,25 @@ export class CaptureSession {
       (await navigator.mediaDevices.getUserMedia({
         audio: { ...MIC_CONSTRAINTS, deviceId: options.deviceId ? { exact: options.deviceId } : undefined },
       }))
-    const sessionId = await createSession(options.label, options.vocabulary)
-    const db = options.db ?? openCaptureDb()
-    await db.sessions.put({
-      id: sessionId,
-      label: options.label,
-      vocabulary: options.vocabulary,
-      startedAt: Date.now(),
-      status: 'recording',
-      mime,
-    })
-    await navigator.storage?.persist?.()
-    return new CaptureSession(sessionId, mime, db, stream, !options.stream, options)
+    const ownsStream = !options.stream
+    try {
+      const sessionId = await createSession(options.label, options.vocabulary)
+      const db = options.db ?? openCaptureDb()
+      await db.sessions.put({
+        id: sessionId,
+        label: options.label,
+        vocabulary: options.vocabulary,
+        startedAt: Date.now(),
+        status: 'recording',
+        mime,
+      })
+      await navigator.storage?.persist?.()
+      return new CaptureSession(sessionId, mime, db, stream, ownsStream, options)
+    } catch (error) {
+      // The microphone was opened above; a failed API call must not leave it on.
+      if (ownsStream) stream.getTracks().forEach((track) => track.stop())
+      throw error
+    }
   }
 
   private constructor(
@@ -121,14 +128,20 @@ export class CaptureSession {
 
   async start(): Promise<void> {
     if (this.stateValue !== 'ready') return
-    this.clock.start()
-    this.cutter.startChunk(0)
-    this.recorder.start(0)
-    this.setState('recording')
-    await this.meter.start((db) => this.onLevel(db))
-    await this.wakeLock.acquire()
-    window.addEventListener('online', this.onOnline)
-    await this.queue.start()
+    try {
+      // The meter comes first: without level samples nothing would ever cut.
+      await this.meter.start((db) => this.onLevel(db))
+      this.clock.start()
+      this.cutter.startChunk(0)
+      this.recorder.start(0)
+      this.setState('recording')
+      await this.wakeLock.acquire()
+      window.addEventListener('online', this.onOnline)
+      await this.queue.start()
+    } catch (error) {
+      await this.release()
+      throw error
+    }
   }
 
   pause(): void {
@@ -155,15 +168,21 @@ export class CaptureSession {
     if (this.stateValue === 'recording') this.endChunk('stop')
     this.clock.pause()
     this.setState('stopped')
+    await this.release()
+    await this.db.sessions.update(this.sessionId, { status: 'stopped' })
+  }
+
+  /** Give back the microphone, the audio graph and the wake lock. Safe to call twice. */
+  private async release(): Promise<void> {
+    window.removeEventListener('online', this.onOnline)
     await this.meter.stop()
     await this.wakeLock.release()
     if (this.ownsStream) this.stream.getTracks().forEach((track) => track.stop())
-    await this.db.sessions.update(this.sessionId, { status: 'stopped' })
   }
 
   /** Stop the upload queue; anything still pending stays in IndexedDB. */
   async close(): Promise<void> {
-    window.removeEventListener('online', this.onOnline)
+    await this.release()
     await this.queue.stop()
   }
 

@@ -54,6 +54,8 @@ export function useCapture() {
       setChunks([])
       setQueue(EMPTY_QUEUE)
       setStatus('starting')
+      await session.current?.close()
+      session.current = null
       try {
         const next = await CaptureSession.open({
           ...options,

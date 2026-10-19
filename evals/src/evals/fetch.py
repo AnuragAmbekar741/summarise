@@ -34,8 +34,9 @@ def vocabulary(turns: list[tuple[str, str]], size: int = VOCABULARY_SIZE) -> lis
     """Rare words said at least twice, most frequent first; numbers and short words skipped."""
     counts: Counter[str] = Counter()
     for _, text in turns:
-        for word in re.findall(r"[A-Za-z][A-Za-z\-]+", text):
-            counts[word.lower()] += 1
+        for word in re.findall(r"[A-Za-z][A-Za-z'’\-]+", text):
+            if "'" not in word and "’" not in word:  # contractions are not course terms
+                counts[word.lower()] += 1
     rare = [
         (count, word)
         for word, count in counts.items()
@@ -61,7 +62,7 @@ def fetch(lecture: dict, corpus_dir: Path, client: httpx.Client, force: bool = F
 
     suffix = Path(lecture["audio"]).suffix
     audio = folder / f"source{suffix}"
-    if force or not audio.exists():
+    if not audio.exists():  # delete the file to download it again
         print(f"  audio {lecture['audio']}")
         download(lecture["audio"], audio, client)
 
@@ -79,7 +80,7 @@ def fetch(lecture: dict, corpus_dir: Path, client: httpx.Client, force: bool = F
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--only", help="comma-separated slugs")
-    parser.add_argument("--force", action="store_true")
+    parser.add_argument("--force", action="store_true", help="rebuild references and vocabulary")
     args = parser.parse_args(argv)
 
     wanted = set(args.only.split(",")) if args.only else None

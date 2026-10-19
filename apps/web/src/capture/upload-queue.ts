@@ -93,11 +93,8 @@ export class UploadQueue {
         continue
       }
 
-      await db.chunks.update(next.id, {
-        status: 'uploading',
-        sentAt: now(),
-        attempts: next.attempts + 1,
-      })
+      const sending = { status: 'uploading' as const, sentAt: now(), attempts: next.attempts + 1 }
+      await db.chunks.update(next.id, sending)
       try {
         const result = await upload(next)
         const done: Partial<ChunkRow> = {
@@ -111,7 +108,7 @@ export class UploadQueue {
         await db.chunks.update(next.id, done)
         this.failures = 0
         this.state = { ...this.state, lastError: null, retryAt: null }
-        this.options.onTranscribed?.({ ...next, ...done, attempts: next.attempts + 1 })
+        this.options.onTranscribed?.({ ...next, ...sending, ...done })
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
         if (error instanceof HttpError && error.permanent) {

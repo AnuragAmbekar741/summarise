@@ -67,14 +67,21 @@ describe('UploadQueue', () => {
     await db.chunks.bulkAdd([row(3), row(1), row(2)])
     const order: number[] = []
     const transcribed: number[] = []
+    const reported: ChunkRow[] = []
+    let clock = 1_000
     const queue = new UploadQueue({
       db,
       sessionId: SESSION,
       upload: async (r) => {
         order.push(r.seq)
+        clock += 700
         return ok(r)
       },
-      onTranscribed: (r) => transcribed.push(r.seq),
+      onTranscribed: (r) => {
+        transcribed.push(r.seq)
+        reported.push(r)
+      },
+      now: () => clock,
     })
 
     await queue.start()
@@ -87,6 +94,10 @@ describe('UploadQueue', () => {
     expect(first?.segments[0].text).toBe('chunk 1')
     expect(first?.attempts).toBe(1)
     expect(queue.current.pending).toBe(0)
+    // The row handed to the UI matches what was stored, round-trip timing included.
+    expect(reported[0]).toMatchObject({ status: 'transcribed', attempts: 1 })
+    expect(reported[0].shownAt! - reported[0].sentAt!).toBe(700)
+    expect(reported[0]).toEqual({ ...first })
   })
 
   it('backs off on network errors and retries the same chunk', async () => {

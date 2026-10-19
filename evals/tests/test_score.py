@@ -4,8 +4,15 @@ import pytest
 
 from evals.corpus import Segment, load_lecture, load_session
 from evals.metrics import percentile
+from evals.normalize import normalize
 from evals.providers import ASSEMBLYAI_FULL, Hypothesis, live_chunks
-from evals.score import gate_notes, score, student_turns_labelled
+from evals.score import (
+    align_span,
+    gate_notes,
+    score,
+    student_turns_in_span,
+    student_turns_labelled,
+)
 
 
 def test_percentile_matches_web_app() -> None:
@@ -42,10 +49,11 @@ def test_student_turns_labelled_uses_minority_speaker(corpus_dir: Path) -> None:
         Segment(1, 10_000, 14_000, "Is the F1 score on the exam", "B"),
         Segment(1, 14_000, 30_000, "The F1 score is the harmonic mean of both", "A"),
     ]
-    assert student_turns_labelled(lecture, segments) == 1.0
+    turns = lecture.student_turns
+    assert student_turns_labelled(turns, segments, segments) == 1.0
 
     same_speaker = [Segment(s.seq, s.start_ms, s.end_ms, s.text, "A") for s in segments]
-    assert student_turns_labelled(lecture, same_speaker) == 0.0
+    assert student_turns_labelled(turns, same_speaker, same_speaker) == 0.0
 
 
 def test_full_file_scores_have_no_cut_metrics(data_dir: Path, corpus_dir: Path) -> None:
@@ -72,3 +80,45 @@ def test_gate_notes_flag_failures(data_dir: Path, corpus_dir: Path) -> None:
     assert any("WER" in n for n in notes)
     assert any("term recall" in n for n in notes)
     assert any("boundary" in n for n in notes)
+
+
+def test_align_span_finds_the_window_inside_a_full_transcript() -> None:
+    reference = normalize(
+        "welcome everyone to the course. today we cover precision and recall in detail, "
+        "and then the f1 score. next week regularization and more."
+    )
+    hypothesis = normalize("we cover precision and recall in detail and then the f1 score")
+    start, end = align_span(reference, hypothesis)
+    assert reference[start:end] == hypothesis
+
+
+def test_align_span_extends_past_misheard_edges() -> None:
+    reference = normalize("one two three four five six seven eight nine ten eleven twelve")
+    hypothesis = normalize("tree four five six seven eight nine tin")  # edges misheard
+    start, end = align_span(reference, hypothesis)
+    assert reference[start:end] == normalize("three four five six seven eight nine ten")
+
+
+def test_student_turns_in_span(corpus_dir: Path) -> None:
+    lecture = load_lecture("demo", corpus_dir)
+    # Turn token ranges: 0-6 instructor, 6-13 student, 13-20 instructor.
+    assert student_turns_in_span(lecture, (0, 6)) == []
+    assert student_turns_in_span(lecture, (5, 8)) == ["Is the F1 score on the exam?"]
+
+
+def test_score_slices_a_full_reference(data_dir: Path, corpus_dir: Path) -> None:
+    lecture = load_lecture("demo", corpus_dir)
+    lecture.reference = (
+        "Opening remarks before the window. " + lecture.reference + " Closing words."
+    )
+    lecture.turns = [
+        ("", "Opening remarks before the window."),
+        *lecture.turns,
+        ("", "Closing words."),
+    ]
+    session = load_session("s1", data_dir)
+
+    s = score(lecture, session, live_chunks(session))
+
+    assert s.reference_words < len(normalize(lecture.reference))
+    assert s.reference_span[0] == 5  # "opening remarks before the window" skipped

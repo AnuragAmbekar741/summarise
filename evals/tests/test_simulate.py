@@ -1,11 +1,13 @@
 import itertools
+import json
 import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
 
-from evals.simulate import STEP_MS, cut_stats, encode, levels, plan_chunks
+from api.modules.proof.storage import SessionStore
+from evals.simulate import STEP_MS, cut_stats, encode, existing_session, levels, plan_chunks
 
 SPEECH, QUIET = -20.0, -55.0
 
@@ -59,3 +61,18 @@ def test_levels_and_encode_with_ffmpeg(tmp_path: Path) -> None:
 
     webm = encode(b"\x00\x01" * 16_000)  # 1 s of near-silence
     assert webm[:4] == b"\x1a\x45\xdf\xa3"  # WebM/Matroska header
+
+
+def test_existing_session_needs_its_data_folder(tmp_path: Path) -> None:
+    store = SessionStore(tmp_path / "data")
+    window = tmp_path / "reference-window.json"
+    assert existing_session(window, store) is None
+
+    live = store.create("lec", [])
+    window.write_text(json.dumps({"session": live, "start_ms": 0, "end_ms": 1}))
+    assert existing_session(window, store) == live
+
+    window.write_text(
+        json.dumps({"session": "01a10000-0000-7000-8000-000000000000", "start_ms": 0, "end_ms": 1})
+    )
+    assert existing_session(window, store) is None

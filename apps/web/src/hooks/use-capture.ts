@@ -87,6 +87,14 @@ export function useCapture() {
     setElapsedMs(session.current?.elapsedMs() ?? 0)
   }, [])
 
+  /** Back to the setup screen; the finished session keeps uploading until replaced. */
+  const reset = useCallback(() => {
+    setStatus('idle')
+    setElapsedMs(0)
+    setLevel(SILENT_LEVEL)
+    setError(null)
+  }, [])
+
   const sessionRow = useCallback(
     async (): Promise<SessionRow | undefined> => (sessionId ? db.sessions.get(sessionId) : undefined),
     [db, sessionId],
@@ -104,6 +112,7 @@ export function useCapture() {
     pause,
     resume,
     stop,
+    reset,
     sessionRow,
   }
 }

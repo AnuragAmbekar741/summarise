@@ -150,11 +150,14 @@ def full_file_groq(
 
 
 def full_file_assemblyai(
-    path: Path, transcribe_file: Callable[[Path], DiarizedTranscript]
+    path: Path, offset_ms: int, transcribe_file: Callable[[Path], DiarizedTranscript]
 ) -> Hypothesis:
+    """One file whose start sits `offset_ms` into the lecture."""
     result = transcribe_file(path)
     segments = [
-        Segment(1, round(u.start * 1000), round(u.end * 1000), u.text, u.speaker)
+        Segment(
+            1, offset_ms + round(u.start * 1000), offset_ms + round(u.end * 1000), u.text, u.speaker
+        )
         for u in result.utterances
     ]
     return Hypothesis(

@@ -88,9 +88,9 @@ def test_full_file_assemblyai_keeps_speakers() -> None:
             latency_ms=90_000,
         )
 
-    h = full_file_assemblyai(Path("lecture.ogg"), fake)
+    h = full_file_assemblyai(Path("lecture.ogg"), 540_000, fake)
     assert h.config == ASSEMBLYAI_FULL
-    assert [(s.speaker, s.start_ms) for s in h.segments] == [("A", 0), ("B", 9_800)]
+    assert [(s.speaker, s.start_ms) for s in h.segments] == [("A", 540_000), ("B", 549_800)]
     assert h.cost_usd() == pytest.approx(0.17)
 
 

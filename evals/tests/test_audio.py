@@ -38,10 +38,11 @@ def test_lecture_parts_keep_lecture_time(tmp_path: Path) -> None:
         return path
 
     chunks = [
-        Chunk(1, 0, 3_000, "audio/ogg", tone("a.ogg", 3)),
-        Chunk(3, 5_000, 2_000, "audio/ogg", tone("b.ogg", 2)),  # 2 s silent gap before
+        Chunk(4, 600_000, 3_000, "audio/ogg", tone("a.ogg", 3)),  # starts 10 min in
+        Chunk(6, 605_000, 2_000, "audio/ogg", tone("b.ogg", 2)),  # 2 s silent gap before
     ]
     parts = lecture_parts(chunks, tmp_path / "work", part_seconds=4)
 
-    assert [offset for _, offset in parts] == [0, 4_000]
+    # Audio starts at the first chunk, not at 0:00, and offsets stay on the lecture clock.
+    assert [offset for _, offset in parts] == [600_000, 604_000]
     assert wav_seconds(tmp_path / "work" / "lecture.wav") == pytest.approx(7.0, abs=0.05)

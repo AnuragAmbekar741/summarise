@@ -1,7 +1,13 @@
 import pytest
 
 from evals.normalize import normalize
-from evals.scoring import boundary_errors, count_phrase, vocabulary_recall, word_error_rate
+from evals.scoring import (
+    baseline_error_rate,
+    boundary_errors,
+    count_phrase,
+    vocabulary_recall,
+    word_error_rate,
+)
 
 
 def test_wer_counts_edits() -> None:
@@ -61,3 +67,22 @@ def test_boundary_errors_ignores_errors_far_from_cuts() -> None:
     _, alignment = word_error_rate(reference, hypothesis)
     assert boundary_errors(alignment, [7]) == 0
     assert boundary_errors(alignment, [2]) == 1
+
+
+def test_baseline_error_rate_ignores_positions_near_cuts() -> None:
+    reference = [f"w{i}" for i in range(60)]
+    hypothesis = list(reference)
+    hypothesis[30] = "oops"  # one error, right at the cut
+    hypothesis[50] = "oops"  # one error far from the cut
+    _, alignment = word_error_rate(reference, hypothesis)
+
+    assert boundary_errors(alignment, [30]) == 1
+    rate = baseline_error_rate(alignment, len(hypothesis), [30])
+    # Positions 0-19 and 41-59 count (39); 49-52 see the error at 50 within the
+    # half-open window [b - 2, b + 2), the same window used for cuts.
+    assert rate == pytest.approx(4 / 39)
+
+
+def test_baseline_needs_positions_away_from_cuts() -> None:
+    _, alignment = word_error_rate(["a", "b"], ["a", "b"])
+    assert baseline_error_rate(alignment, 2, [1]) is None

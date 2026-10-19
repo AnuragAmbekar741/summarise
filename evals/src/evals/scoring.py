@@ -89,17 +89,11 @@ def vocabulary_recall(
     return found / present, counts
 
 
-def boundary_errors(
-    alignment: Sequence[Alignment], boundaries: Sequence[int], radius: int = 2
-) -> int:
-    """Cuts with at least one recognition error within `radius` hypothesis words.
-
-    `boundaries` are hypothesis word indices where a new chunk starts. A split or
-    doubled word at a cut shows up as an error right at that index.
-    """
+def errors_near(alignment: Sequence[Alignment], positions: Sequence[int], radius: int = 2) -> int:
+    """How many hypothesis positions have a recognition error within `radius` words."""
     errors = [a for a in alignment if a.kind != "equal"]
     hit = 0
-    for b in boundaries:
+    for b in positions:
         lo, hi = b - radius, b + radius
         for a in errors:
             if a.hyp_start == a.hyp_end:  # deletion: a point in the hypothesis
@@ -110,3 +104,29 @@ def boundary_errors(
                 hit += 1
                 break
     return hit
+
+
+def boundary_errors(
+    alignment: Sequence[Alignment], boundaries: Sequence[int], radius: int = 2
+) -> int:
+    """Cuts with at least one recognition error within `radius` hypothesis words.
+
+    `boundaries` are hypothesis word indices where a new chunk starts. A split or
+    doubled word at a cut shows up as an error right at that index.
+    """
+    return errors_near(alignment, boundaries, radius)
+
+
+def baseline_error_rate(
+    alignment: Sequence[Alignment],
+    words: int,
+    boundaries: Sequence[int],
+    radius: int = 2,
+    clearance: int = 10,
+) -> float | None:
+    """Share of positions away from cuts with an error within `radius`: the rate
+    expected near a cut if cutting caused no errors of its own."""
+    positions = [i for i in range(words) if all(abs(i - b) > clearance for b in boundaries)]
+    if not positions:
+        return None
+    return errors_near(alignment, positions, radius) / len(positions)

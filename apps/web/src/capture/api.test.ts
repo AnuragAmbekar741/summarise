@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HttpError, sha256Hex, uploadChunk } from './api'
+import { HttpError, UPLOAD_TIMEOUT_MS, sha256Hex, uploadChunk } from './api'
 import type { ChunkRow } from './db'
 
 function row(overrides: Partial<ChunkRow> = {}): ChunkRow {
@@ -27,9 +27,11 @@ describe('uploadChunk', () => {
   it('posts the chunk as multipart and maps the response', async () => {
     let url = ''
     let form = new FormData()
+    let signal: AbortSignal | null | undefined
     const fakeFetch = (async (input: string, init: RequestInit) => {
       url = input
       form = init.body as FormData
+      signal = init.signal
       return Response.json({
         seq: 3,
         segments: [{ seq: 3, start_ms: 60_500, end_ms: 62_000, text: 'hello' }],
@@ -41,6 +43,7 @@ describe('uploadChunk', () => {
     const result = await uploadChunk(row(), fakeFetch, () => 1_700_000_000_500)
 
     expect(url).toBe('/api/proof/sessions/s1/chunks')
+    expect(signal).toBeInstanceOf(AbortSignal)
     expect((form.get('file') as File).name).toBe('3.webm')
     expect(Object.fromEntries([...form.entries()].filter(([k]) => k !== 'file'))).toEqual({
       seq: '3',
@@ -74,6 +77,20 @@ describe('uploadChunk', () => {
     expect(error).toBeInstanceOf(HttpError)
     expect((error as HttpError).permanent).toBe(true)
     expect((error as HttpError).message).toContain('sha256 does not match')
+  })
+})
+
+describe('upload timeout', () => {
+  it('rejects with a non-permanent error when the signal fires', async () => {
+    const fakeFetch = ((_: string, init: RequestInit) =>
+      new Promise<Response>((_, reject) => {
+        init.signal?.addEventListener('abort', () => reject(init.signal?.reason))
+      })) as unknown as typeof fetch
+    const error = await uploadChunk(row(), fakeFetch, Date.now, 20).catch((e: unknown) => e)
+    expect(error).toBeInstanceOf(DOMException)
+    expect((error as DOMException).name).toBe('TimeoutError')
+    expect(error).not.toBeInstanceOf(HttpError) // the queue retries anything but HttpError.permanent
+    expect(UPLOAD_TIMEOUT_MS).toBeGreaterThanOrEqual(10_000)
   })
 })
 

@@ -24,6 +24,12 @@ export type ChunkResponse = {
 
 type Fetch = typeof fetch
 
+/**
+ * A chunk is at most 8 MB; on a working connection it uploads and transcribes
+ * in a few seconds. Past this the socket is treated as dead and the queue retries.
+ */
+export const UPLOAD_TIMEOUT_MS = 30_000
+
 const EXTENSIONS: Record<string, string> = { webm: 'webm', ogg: 'ogg', mp4: 'm4a' }
 
 export async function createSession(
@@ -44,6 +50,7 @@ export async function uploadChunk(
   row: ChunkRow,
   fetchFn: Fetch = fetch,
   now: () => number = Date.now,
+  timeoutMs: number = UPLOAD_TIMEOUT_MS,
 ): Promise<ChunkResponse> {
   const subtype = row.mime.split(';')[0].split('/')[1] ?? 'webm'
   const form = new FormData()
@@ -57,6 +64,7 @@ export async function uploadChunk(
   const response = await fetchFn(`/api/proof/sessions/${row.sessionId}/chunks`, {
     method: 'POST',
     body: form,
+    signal: AbortSignal.timeout(timeoutMs),
   })
   const body = await json(response)
   return {

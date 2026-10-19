@@ -1,4 +1,4 @@
-.PHONY: help setup api web dev test test-live lint eval-reference eval-transcript
+.PHONY: help setup api web dev test test-live lint corpus eval-reference eval-transcript
 
 # List targets
 help:
@@ -34,6 +34,10 @@ lint:
 	uv run ruff format --check apps packages evals
 	pnpm --dir apps/web lint
 	pnpm --dir apps/web typecheck
+
+# Download the public lecture corpus (~1 GB, gitignored): make corpus [ARGS="--only <slug>"]
+corpus:
+	uv run --package evals python -m evals.fetch $(ARGS)
 
 # Draft a reference window to correct by hand:
 # make eval-reference LECTURE=<slug> SESSION=<id> START=12:00 END=22:00

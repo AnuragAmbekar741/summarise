@@ -13,7 +13,10 @@ from speech.prompt import build_prompt
 from speech.types import TranscriptionResult
 
 MAX_CHUNK_BYTES = 8 * 1024 * 1024
-MAX_CHUNK_MS = 60_000
+# A sanity bound only. The browser cuts at 45 s, but a stalled level meter can
+# produce a much longer chunk whose audio is still worth transcribing; the size
+# cap above is what actually limits a request.
+MAX_CHUNK_MS = 2 * 60 * 60 * 1000
 
 # (audio path, mime, prompt) -> raw Whisper result
 Transcriber = Callable[[Path, str, str], TranscriptionResult]

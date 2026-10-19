@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.modules.proof.router import router as proof_router
 from api.settings import get_settings
 
 
@@ -18,6 +19,7 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
+    app.include_router(proof_router)
     return app
 
 

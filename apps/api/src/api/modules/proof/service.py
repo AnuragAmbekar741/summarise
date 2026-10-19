@@ -119,7 +119,5 @@ def _validate(chunk: ChunkUpload) -> str:
 
 def _previous_text(store: SessionStore, session_id: str, seq: int) -> str:
     """Text of the latest stored chunk before `seq`; silent chunks are never uploaded."""
-    earlier = [r for r in store.results(session_id) if r.seq < seq]
-    if not earlier:
-        return ""
-    return " ".join(s.text for s in earlier[-1].segments)
+    previous = store.latest_result_before(session_id, seq)
+    return " ".join(s.text for s in previous.segments) if previous else ""

@@ -82,6 +82,15 @@ class SessionStore:
         with self._lock, (folder / "chunks.jsonl").open("a") as log:
             log.write(payload + "\n")
 
+    def latest_result_before(self, session_id: str, seq: int) -> ChunkResult | None:
+        """The stored result with the highest seq below `seq`, reading one file."""
+        folder = self._folder(session_id)
+        names = sorted(p.name for p in folder.glob("[0-9][0-9][0-9][0-9][0-9].json"))
+        earlier = [n for n in names if int(n[:5]) < seq]
+        if not earlier:
+            return None
+        return ChunkResult.model_validate_json((folder / earlier[-1]).read_text())
+
     def results(self, session_id: str) -> list[ChunkResult]:
         folder = self._folder(session_id)
         return [

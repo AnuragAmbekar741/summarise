@@ -66,6 +66,21 @@ def test_keeps_speech_that_shares_some_words_with_prompt() -> None:
     assert run(continuing, prompt=PROMPT).segments == [continuing]
 
 
+def test_keeps_real_speech_that_reuses_prompt_words() -> None:
+    # Seen on ECON 159: the previous chunk held these words, but the student
+    # really did say them, so a bag-of-words echo test was wrong.
+    prompt = "but I guess not. So I chose Beta. Good question. Anyone else?"
+    heard = seg("I guess not. Good.", -0.3, 1.1)
+    assert run(heard, prompt=prompt).segments == [heard]
+    terms = seg("Precision and recall.", -0.2, 1.1)
+    assert run(terms, prompt="precision, recall, and the F1 score").segments == [terms]
+
+
+def test_drops_verbatim_echo_with_changed_last_word() -> None:
+    echo = seg("and the F1 score is the same.", -0.5, 0.9)
+    assert [d.reason for d in run(echo, prompt=PROMPT).dropped] == ["prompt_echo"]
+
+
 def test_keeps_short_segments_from_echo_rule() -> None:
     short = seg("Recall matters.", -0.2)
     assert run(short, prompt=PROMPT).segments == [short]

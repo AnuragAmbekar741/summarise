@@ -16,6 +16,7 @@ from pathlib import Path
 from evals.audio import FfmpegMissing, lecture_parts
 from evals.corpus import RESULTS_DIR, Session, load_lecture, load_session
 from evals.keys import MissingKey, key
+from evals.normalize import normalize
 from evals.providers import (
     ASSEMBLYAI_FULL,
     CONFIGS,
@@ -28,7 +29,7 @@ from evals.providers import (
     live_chunks,
     rerun_chunks,
 )
-from evals.score import Score, gate_notes, score
+from evals.score import Score, align_span, gate_notes, score, window_words
 from speech import assemblyai, groq
 
 RATES_NOTE = "USD rates are the October 2026 research snapshot; confirm before deciding."
@@ -58,10 +59,12 @@ def run(config: str, session: Session, cache: Path, fresh: bool) -> Hypothesis:
         )
     elif config == ASSEMBLYAI_FULL:
         api_key = key("ASSEMBLYAI_API_KEY")
-        [(full, _)] = lecture_parts(session.chunks, cache / "audio-full", part_seconds=10**7)
+        [(full, offset_ms)] = lecture_parts(
+            session.chunks, cache / "audio-full", part_seconds=10**7
+        )
         with assemblyai.make_client(api_key) as client:
             hypothesis = full_file_assemblyai(
-                full, lambda p: assemblyai.transcribe_file(p, client=client)
+                full, offset_ms, lambda p: assemblyai.transcribe_file(p, client=client)
             )
     else:
         raise ValueError(f"unknown config {config}")
@@ -113,6 +116,10 @@ def main(argv: list[str] | None = None) -> None:
     session = load_session(args.session or lecture.session_id)
     cache = RESULTS_DIR / "cache" / session.id
 
+    # One reference slice for every config: aligned to what ran live.
+    live_words, _, _ = window_words(lecture, run(GROQ_TURBO_CHUNKS, session, cache, False))
+    span = align_span(normalize(lecture.reference), live_words)
+
     scores: list[Score] = []
     dropped: dict[str, list[dict]] = {}
     skipped: dict[str, str] = {}
@@ -120,7 +127,7 @@ def main(argv: list[str] | None = None) -> None:
         print(f"running {config} ...", flush=True)
         try:
             hypothesis = run(config, session, cache, args.fresh)
-            scores.append(score(lecture, session, hypothesis))
+            scores.append(score(lecture, session, hypothesis, span))
             dropped[config] = hypothesis.dropped_segments
         except (FfmpegMissing, MissingKey) as error:
             skipped[config] = str(error)
@@ -135,6 +142,7 @@ def main(argv: list[str] | None = None) -> None:
                 "lecture": lecture.slug,
                 "session": session.id,
                 "window_ms": [lecture.start_ms, lecture.end_ms],
+                "reference_span": list(span),
                 "lecture_ms": session.duration_ms,
                 "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
                 "rates_note": RATES_NOTE,

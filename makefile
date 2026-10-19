@@ -1,4 +1,4 @@
-.PHONY: help setup api web dev test lint eval-transcript
+.PHONY: help setup api web dev test test-live lint eval-transcript
 
 # List targets
 help:
@@ -24,6 +24,10 @@ dev:
 test:
 	uv run pytest -q
 	pnpm --dir apps/web test
+
+# Real provider calls (Groq, AssemblyAI); needs keys in .env, costs under a cent
+test-live:
+	uv run pytest -q -m live
 
 lint:
 	uv run ruff check .

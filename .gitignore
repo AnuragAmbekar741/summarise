@@ -36,3 +36,6 @@ evals/corpus/**/*.mp3
 .vscode/
 *.swp
 .DS_Store
+
+# Eval provider cache: joined audio and raw transcripts
+evals/results/cache/

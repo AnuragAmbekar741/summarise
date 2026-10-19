@@ -1,4 +1,4 @@
-.PHONY: help setup api web dev test test-live lint eval-transcript
+.PHONY: help setup api web dev test test-live lint eval-reference eval-transcript
 
 # List targets
 help:
@@ -35,7 +35,14 @@ lint:
 	pnpm --dir apps/web lint
 	pnpm --dir apps/web typecheck
 
-# Compare providers on a recorded lecture: make eval-transcript LECTURE=<slug> SESSION=<id>
+# Draft a reference window to correct by hand:
+# make eval-reference LECTURE=<slug> SESSION=<id> START=12:00 END=22:00
+eval-reference:
+	@test -n "$(LECTURE)" -a -n "$(SESSION)" -a -n "$(START)" -a -n "$(END)" || (echo 'Usage: make eval-reference LECTURE=<slug> SESSION=<id> START=mm:ss END=mm:ss' && exit 1)
+	uv run --package evals python -m evals.reference --lecture $(LECTURE) --session $(SESSION) --start $(START) --end $(END) $(ARGS)
+
+# Compare providers on a labelled lecture (costs money on first run; cached after):
+# make eval-transcript LECTURE=<slug> [ARGS="--configs groq-turbo-chunks,groq-v3-chunks --fresh"]
 eval-transcript:
-	@test -n "$(LECTURE)" -a -n "$(SESSION)" || (echo 'Usage: make eval-transcript LECTURE=<slug> SESSION=<id>' && exit 1)
-	uv run --package evals python -m evals.transcript --lecture $(LECTURE) --session $(SESSION)
+	@test -n "$(LECTURE)" || (echo 'Usage: make eval-transcript LECTURE=<slug>' && exit 1)
+	uv run --package evals python -m evals.transcript --lecture $(LECTURE) $(ARGS)

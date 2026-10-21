@@ -1,18 +1,6 @@
-# Python
-.venv/
-__pycache__/
-*.py[cod]
-*.egg-info/
-dist/
-build/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-
 # Node
 node_modules/
+dist/
 .pnpm-store/
 
 # Secrets
@@ -23,16 +11,8 @@ node_modules/
 # Local data: recorded chunks, transcripts
 .data/
 
-# Eval corpus: downloaded audio, transcripts and references (licensed, never committed).
-# Only the manifest is tracked.
-evals/corpus/*
-!evals/corpus/manifest.json
-
 # Editors and OS
 .idea/
 .vscode/
 *.swp
 .DS_Store
-
-# Eval provider cache: joined audio and raw transcripts
-evals/results/cache/

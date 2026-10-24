@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.15.0",
-  "scripts": {},
+  "scripts": {
+    "typecheck": "pnpm -r typecheck"
+  },
   "devEngines": {
     "packageManager": {
       "name": "pnpm",

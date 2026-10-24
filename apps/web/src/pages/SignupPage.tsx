@@ -1,4 +1,3 @@
-import { ArrowRight } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -138,18 +137,6 @@ export function SignupPage() {
           Create account with email
         </Button>
       </form>
-
-      <div className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-6">
-        <span className="text-body-md whitespace-nowrap text-body">
-          Already have an account?
-        </span>
-        <Button variant="secondary" className="px-4" asChild>
-          <Link to="/login">
-            Log in
-            <ArrowRight />
-          </Link>
-        </Button>
-      </div>
     </AuthLayout>
   );
 }

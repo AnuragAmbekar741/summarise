@@ -7,12 +7,12 @@ outline, secondary and tertiary buttons carry everything else.
 
 ## Variants
 
-| Variant     | Background                | Text                  | Border                         | Use                                                                         |
-| ----------- | ------------------------- | --------------------- | ------------------------------ | --------------------------------------------------------------------------- |
-| `primary`   | `{colors.primary}`        | `{colors.on-primary}` | none                           | The main action on a view. Use scarcely.                                    |
-| `outline`   | transparent               | `{colors.ink}`        | 1px `{colors.hairline-strong}` | Secondary actions, e.g. "Continue with Google".                             |
-| `secondary` | `{colors.surface-strong}` | `{colors.ink}`        | none                           | Soft follow-up actions, e.g. "Create an account →" at the bottom of a card. |
-| `tertiary`  | transparent               | `{colors.ink}`        | none                           | Inline text actions, e.g. "Forgot password?".                               |
+| Variant     | Background                | Text                  | Border                         | Use                                             |
+| ----------- | ------------------------- | --------------------- | ------------------------------ | ----------------------------------------------- |
+| `primary`   | `{colors.primary}`        | `{colors.on-primary}` | none                           | The main action on a view. Use scarcely.        |
+| `outline`   | transparent               | `{colors.ink}`        | 1px `{colors.hairline-strong}` | Secondary actions, e.g. "Continue with Google". |
+| `secondary` | `{colors.surface-strong}` | `{colors.ink}`        | none                           | Soft, low-emphasis actions next to content.     |
+| `tertiary`  | transparent               | `{colors.ink}`        | none                           | Inline text actions, e.g. "Forgot password?".   |
 
 `primary` is the default.
 

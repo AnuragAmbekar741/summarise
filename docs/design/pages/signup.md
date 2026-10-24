@@ -1,7 +1,8 @@
 # Signup
 
 Where a new user creates an account, with Google or with name, email and
-password. They must agree to the terms first.
+password. They must agree to the terms first. The "Log in" pill in the nav leads to
+login.
 
 **Route:** `/signup`
 **Source:** `apps/web/src/pages/SignupPage.tsx`
@@ -17,7 +18,6 @@ bottom:
 4. OR divider
 5. Name, Email and Password fields
 6. Create account button
-7. Footer row: "Already have an account?" + link to login, above a hairline
 
 ## Components
 
@@ -29,7 +29,6 @@ bottom:
 | [`OrDivider`](../components/or-divider.md)                            | —                           | Between Google and email            |
 | [`Label`](../components/label.md) + [`Input`](../components/input.md) | —                           | Name, Email, Password               |
 | [`Button`](../components/button.md)                                   | `outline`, `lg`, full width | Submit: "Create account with email" |
-| [`Button`](../components/button.md)                                   | `secondary`                 | Footer: "Log in →"                  |
 
 ## Typography & spacing
 
@@ -43,7 +42,6 @@ bottom:
 | Field label   | `{typography.body-strong}`                               | 12px above its input                          |
 | Fields        | —                                                        | 20px between fields                           |
 | Submit        | —                                                        | 24px below last field                         |
-| Footer row    | `{typography.body-md}`, body                             | 32px above, 24px inside the hairline          |
 
 Terms box: `{colors.canvas-soft}` background, 1px `{colors.hairline}` border,
 `{rounded.lg}` (12px).
@@ -72,12 +70,10 @@ Terms box: `{colors.canvas-soft}` background, 1px `{colors.hairline}` border,
 - Email label / placeholder: "Email" / "you@university.edu"
 - Password label / placeholder: "Password" / "At least 8 characters"
 - Submit: "Create account with email"
-- Footer: "Already have an account?" / "Log in →"
 
 ## States
 
 - Google button is disabled until the terms box is ticked.
 - Submit is disabled until the terms box is ticked, name and email are filled,
   and the password has at least 8 characters.
-- On narrow screens the footer row wraps, putting the link under the text.
 - Loading and error states come with the auth backend.

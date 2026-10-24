@@ -1,6 +1,7 @@
 # Login
 
-Where a returning user signs in, with Google or with email and password.
+Where a returning user signs in, with Google or with email and password. The
+"Create account" pill in the nav leads to signup.
 
 **Route:** `/login`
 **Source:** `apps/web/src/pages/LoginPage.tsx`
@@ -16,31 +17,28 @@ bottom:
 4. Email field
 5. Password field
 6. Log in button
-7. Footer row: "New to Summarise?" + link to signup, above a hairline
 
 ## Components
 
-| Component                                                             | Variant                     | Where                         |
-| --------------------------------------------------------------------- | --------------------------- | ----------------------------- |
-| [`Button`](../components/button.md)                                   | `outline`                   | Nav: "Create account"         |
-| [`GoogleButton`](../components/google-button.md)                      | —                           | Card top                      |
-| [`OrDivider`](../components/or-divider.md)                            | —                           | Between Google and email      |
-| [`Label`](../components/label.md) + [`Input`](../components/input.md) | —                           | Email, Password               |
-| [`Button`](../components/button.md)                                   | `outline`, `lg`, full width | Submit: "Log in"              |
-| [`Button`](../components/button.md)                                   | `secondary`                 | Footer: "Create an account →" |
+| Component                                                             | Variant                     | Where                    |
+| --------------------------------------------------------------------- | --------------------------- | ------------------------ |
+| [`Button`](../components/button.md)                                   | `outline`                   | Nav: "Create account"    |
+| [`GoogleButton`](../components/google-button.md)                      | —                           | Card top                 |
+| [`OrDivider`](../components/or-divider.md)                            | —                           | Between Google and email |
+| [`Label`](../components/label.md) + [`Input`](../components/input.md) | —                           | Email, Password          |
+| [`Button`](../components/button.md)                                   | `outline`, `lg`, full width | Submit: "Log in"         |
 
 ## Typography & spacing
 
-| Piece         | Token                        | Spacing                              |
-| ------------- | ---------------------------- | ------------------------------------ |
-| Heading       | `{typography.display-lg}`    | —                                    |
-| Subheading    | `{typography.body-md}`, body | 12px below heading                   |
-| Google button | —                            | 32px below subheading                |
-| OR divider    | —                            | 24px above and below                 |
-| Field label   | `{typography.body-strong}`   | 12px above its input                 |
-| Fields        | —                            | 20px between fields                  |
-| Submit        | —                            | 24px below last field                |
-| Footer row    | `{typography.body-md}`, body | 32px above, 24px inside the hairline |
+| Piece         | Token                        | Spacing               |
+| ------------- | ---------------------------- | --------------------- |
+| Heading       | `{typography.display-lg}`    | —                     |
+| Subheading    | `{typography.body-md}`, body | 12px below heading    |
+| Google button | —                            | 32px below subheading |
+| OR divider    | —                            | 24px above and below  |
+| Field label   | `{typography.body-strong}`   | 12px above its input  |
+| Fields        | —                            | 20px between fields   |
+| Submit        | —                            | 24px below last field |
 
 ## Atmosphere
 
@@ -63,10 +61,8 @@ bottom:
 - Email label / placeholder: "Email" / "you@university.edu"
 - Password label / placeholder: "Password" / "Your password"
 - Submit: "Log in"
-- Footer: "New to Summarise?" / "Create an account →"
 
 ## States
 
 - Submit is disabled until both email and password are filled.
-- On narrow screens the footer row wraps, putting the link under the text.
 - Loading and error states come with the auth backend.

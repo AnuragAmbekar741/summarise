@@ -1,0 +1,4 @@
+pnpm-lock.yaml
+library/storage/migrations
+.agents
+.claude

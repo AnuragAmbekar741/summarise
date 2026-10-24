@@ -1,0 +1,13 @@
+{
+  "name": "@summarise/queue",
+  "private": true,
+  "exports": "./src/index.ts",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@summarise/logger": "workspace:*",
+    "redis": "^6.3.0"
+  }
+}

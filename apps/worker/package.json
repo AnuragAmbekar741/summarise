@@ -1,0 +1,16 @@
+{
+  "name": "@summarise/worker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc",
+    "dev": "tsx watch src/main.ts"
+  },
+  "dependencies": {
+    "@summarise/config": "workspace:*",
+    "@summarise/queue": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15"
+  }
+}

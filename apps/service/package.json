@@ -1,0 +1,23 @@
+{
+  "name": "@summarise/service",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc",
+    "dev": "tsx watch src/main.ts"
+  },
+  "dependencies": {
+    "@summarise/config": "workspace:*",
+    "@summarise/contract": "workspace:*",
+    "@summarise/queue": "workspace:*",
+    "@summarise/storage": "workspace:*",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "helmet": "^8.3.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "tsx": "^4.23.15"
+  }
+}

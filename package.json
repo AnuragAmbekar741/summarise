@@ -4,7 +4,8 @@
   "type": "module",
   "packageManager": "pnpm@12.15.0",
   "scripts": {
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "dev": "pnpm --parallel --filter './apps/*' dev"
   },
   "devEngines": {
     "packageManager": {

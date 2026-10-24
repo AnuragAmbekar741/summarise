@@ -32,9 +32,13 @@ headline on the left, the auth card on the right, with gradient orbs behind.
 ## Sizes & spacing
 
 - Page: full viewport height, `{colors.canvas}` background, overflow hidden.
-- Nav: 64px tall, 48px side padding (16px on mobile).
+- Nav: 64px tall, 48px side padding (16px on mobile). It sits on top of the
+  page rather than pushing it down, so the content centres in the full
+  viewport.
 - Content: max 1200px wide, 48px side padding, two columns on desktop
-  (`1fr` + 416px card) with a 96px gap; vertically centred.
+  (`1fr` + 416px card) with a 96px gap; vertically centred in the viewport.
+  Desktop keeps 64px clear at the top (for the nav) and 24px at the bottom,
+  so the signup card fits a 790px-tall window without scrolling.
 - Headline: `{typography.display-mega}` on desktop, `display-xl` on tablet,
   `display-md` on mobile.
 - Description: `{typography.body-md}` in `{colors.body}`, max 420px wide, 32px

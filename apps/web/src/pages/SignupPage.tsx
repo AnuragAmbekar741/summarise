@@ -58,11 +58,11 @@ export function SignupPage() {
       }
     >
       <h2 className="text-display-lg">Create your account</h2>
-      <p className="mt-3 text-body-md text-body">
+      <p className="mt-2 text-body-md text-body">
         Start taking notes in under a minute.
       </p>
 
-      <div className="mt-8 flex gap-3 rounded-xl border border-hairline bg-canvas-soft p-4">
+      <div className="mt-5 flex gap-3 rounded-xl border border-hairline bg-canvas-soft p-4">
         <Checkbox
           id="agree"
           className="mt-0.5"
@@ -82,16 +82,16 @@ export function SignupPage() {
         </label>
       </div>
 
-      <GoogleButton className="mt-6" disabled={!agreed}>
+      <GoogleButton className="mt-5" disabled={!agreed}>
         Sign up with Google
       </GoogleButton>
 
-      <div className="my-6">
+      <div className="my-4">
         <OrDivider />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-        <div className="flex flex-col gap-3">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="name">Name</Label>
           <Input
             id="name"
@@ -102,7 +102,7 @@ export function SignupPage() {
             onChange={(e) => setName(e.target.value)}
           />
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -114,7 +114,7 @@ export function SignupPage() {
             onChange={(e) => setEmail(e.target.value)}
           />
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2">
           <Label htmlFor="password">Password</Label>
           <Input
             id="password"
@@ -131,7 +131,7 @@ export function SignupPage() {
           type="submit"
           variant="outline"
           size="lg"
-          className="mt-1 w-full"
+          className="w-full"
           disabled={!agreed || !name || !email || password.length < 8}
         >
           Create account with email

@@ -22,15 +22,16 @@ export function AuthLayout({
   children,
 }: AuthLayoutProps) {
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-canvas">
+    <div className="relative min-h-svh overflow-hidden bg-canvas">
       {orbs}
 
-      <header className="relative z-10 flex h-16 items-center justify-between px-4 pt-4 sm:px-12">
+      {/* Overlays the page so the content centres in the full viewport. */}
+      <header className="absolute inset-x-0 top-0 z-20 flex h-16 items-center justify-between px-4 pt-4 sm:px-12">
         <Logo />
         {navAction}
       </header>
 
-      <main className="relative z-10 mx-auto grid w-full max-w-content flex-1 grid-cols-1 items-center gap-12 px-4 py-12 sm:px-12 lg:grid-cols-[1fr_416px] lg:gap-24">
+      <main className="relative z-10 mx-auto grid min-h-svh w-full max-w-content grid-cols-1 content-center items-center gap-12 px-4 py-24 sm:px-12 lg:grid-cols-[1fr_416px] lg:gap-24 lg:pt-16 lg:pb-6">
         <section>
           <h1 className="text-display-md sm:text-display-xl lg:text-display-mega">
             {headline}

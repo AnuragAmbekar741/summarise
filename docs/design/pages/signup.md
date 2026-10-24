@@ -32,16 +32,19 @@ bottom:
 
 ## Typography & spacing
 
+Spacing is tighter than on login so the whole card fits on screen without
+scrolling.
+
 | Piece         | Token                                                    | Spacing                                       |
 | ------------- | -------------------------------------------------------- | --------------------------------------------- |
 | Heading       | `{typography.display-lg}`                                | —                                             |
-| Subheading    | `{typography.body-md}`, body                             | 12px below heading                            |
-| Terms box     | `{typography.body-sm}`, body; links ink, 500, underlined | 32px below subheading; 16px padding, 12px gap |
-| Google button | —                                                        | 24px below terms box                          |
-| OR divider    | —                                                        | 24px above and below                          |
-| Field label   | `{typography.body-strong}`                               | 12px above its input                          |
-| Fields        | —                                                        | 20px between fields                           |
-| Submit        | —                                                        | 24px below last field                         |
+| Subheading    | `{typography.body-md}`, body                             | 8px below heading                             |
+| Terms box     | `{typography.body-sm}`, body; links ink, 500, underlined | 24px below subheading; 16px padding, 12px gap |
+| Google button | —                                                        | 20px below terms box                          |
+| OR divider    | —                                                        | 16px above and below                          |
+| Field label   | `{typography.body-strong}`                               | 8px above its input                           |
+| Fields        | —                                                        | 16px between fields                           |
+| Submit        | —                                                        | 16px below last field                         |
 
 Terms box: `{colors.canvas-soft}` background, 1px `{colors.hairline}` border,
 `{rounded.lg}` (12px).

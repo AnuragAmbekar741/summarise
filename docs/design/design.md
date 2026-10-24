@@ -347,7 +347,7 @@ These appear ONLY as soft radial-gradient atmospheric orbs inside `{component.gr
 
 ### Dark theme
 
-Dark mode is turned on by the `.dark` class on `<html>`. Every token keeps its name; values come from `colors-dark` above.
+Dark mode is turned on by the `.dark` class on `<html>`, which follows the system setting. Every token keeps its name; values come from `colors-dark` above.
 
 | Token           | Light   | Dark    |
 | --------------- | ------- | ------- |
@@ -365,6 +365,23 @@ Dark mode is turned on by the `.dark` class on `<html>`. Every token keeps its n
 
 - The primary pill **inverts** in dark mode: light background, dark text.
 - Gradient orbs keep their hues but are dimmed (lower opacity) so they glow rather than glare.
+
+### Colour classes
+
+Use these Tailwind classes. They switch values automatically in dark mode.
+
+| Token                                    | Class                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------- |
+| canvas, canvas-soft                      | `bg-canvas`, `bg-canvas-soft`                                                         |
+| surface-card, surface-strong             | `bg-surface-card`, `bg-surface-strong`                                                |
+| hairline, hairline-soft, hairline-strong | `border-hairline`, `border-hairline-soft`, `border-hairline-strong`                   |
+| ink, body, body-strong                   | `text-ink`, `text-body`, `text-body-strong`                                           |
+| muted, muted-soft                        | `text-muted-foreground`, `text-muted-soft`                                            |
+| primary, primary-active, on-primary      | `bg-primary`, `bg-primary-active`, `text-on-primary`                                  |
+| semantic-error, semantic-success         | `text-destructive`, `text-success`                                                    |
+| gradient-*                               | `orb-mint`, `orb-peach`, `orb-lavender`, `orb-sky`, `orb-rose` (e.g. `from-orb-mint`) |
+
+shadcn/ui variables (`--background`, `--primary`, `--border`, …) point at these tokens, so shadcn components follow the design system without changes.
 
 ## Typography
 
@@ -391,7 +408,11 @@ Dark mode is turned on by the `.dark` class on `<html>`. Every token keeps its n
 | `{typography.button}`            | 15px | 500    | 1.0         | 0              | CTA pill                       |
 | `{typography.nav-link}`          | 15px | 500    | 1.4         | 0              | Top-nav menu                   |
 
-Each token is a Tailwind class: `text-display-mega`, `text-title-md`, `text-body-md`, `text-caption-upper`, etc. Display classes also set the serif font and weight 300; the rest use Inter.
+Each token is a Tailwind class that sets size, line height, letter spacing and weight: `text-display-mega`, `text-title-md`, `text-body-md`, `text-caption-upper`, etc.
+
+- Display tokens need the serif: pair them with `font-display`. Headings (`h1`–`h6`) get `font-display` and weight 300 by default.
+- `text-caption-upper` pairs with `uppercase`.
+- The page body defaults to `text-body-md` in Inter.
 
 ### Principles
 
@@ -466,7 +487,7 @@ build on:
 - Use Inter at +0.15-0.18px tracking for body.
 - Use gradient orbs (mint/peach/lavender/sky/rose) as decoration only.
 - Use the pill shape for every CTA and badge.
-- Use token classes (`bg-canvas`, `text-muted`, `text-body-md`) — never inline hex.
+- Use token classes (`bg-canvas`, `text-muted-foreground`, `text-body-md`) — never inline hex.
 
 ### Don't
 

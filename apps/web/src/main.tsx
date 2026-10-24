@@ -16,5 +16,5 @@ createRoot(root).render(
         <Route path="/" element={<HomePage />} />
       </Routes>
     </BrowserRouter>
-  </StrictMode>
+  </StrictMode>,
 );

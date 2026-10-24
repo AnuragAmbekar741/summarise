@@ -5,7 +5,9 @@ export async function createRedisClient(url: string) {
   const client = createClient({ url, disableOfflineQueue: true });
   // Without a listener, a dropped connection crashes the process.
   // node-redis reconnects on its own.
-  client.on('error', (error: Error) => console.error('redis error:', error.message));
+  client.on('error', (error: Error) =>
+    console.error('redis error:', error.message),
+  );
   await client.connect();
   return client;
 }

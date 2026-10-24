@@ -19,7 +19,11 @@ export function healthRoutes(db: Database, redis: RedisClient) {
       check(() => redis.ping()),
     ]);
     const ok = postgres === 'up' && redisStatus === 'up';
-    const body: Health = { status: ok ? 'ok' : 'error', postgres, redis: redisStatus };
+    const body: Health = {
+      status: ok ? 'ok' : 'error',
+      postgres,
+      redis: redisStatus,
+    };
     res.status(ok ? 200 : 503).json(body);
   });
 }

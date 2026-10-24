@@ -13,16 +13,20 @@ const buttonVariants = cva(
           'rounded-full bg-primary text-on-primary hover:bg-primary-active active:bg-primary-active',
         outline:
           'rounded-full border border-hairline-strong bg-transparent text-ink hover:bg-surface-strong active:bg-surface-strong',
+        secondary:
+          'rounded-full bg-surface-strong text-ink hover:bg-hairline active:bg-hairline',
         tertiary: 'rounded-full text-ink underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-10 px-5',
+        lg: 'h-12 px-6',
         icon: 'size-10',
       },
     },
     compoundVariants: [
-      // 19px + 1px border keeps the label where the primary pill puts it.
+      // 1px less padding + 1px border keeps the label where the primary pill puts it.
       { variant: 'outline', size: 'default', className: 'px-[19px]' },
+      { variant: 'outline', size: 'lg', className: 'px-[23px]' },
       { variant: 'tertiary', size: 'default', className: 'h-auto px-0' },
     ],
     defaultVariants: {

@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "@summarise/config": "workspace:*",
+    "@summarise/logger": "workspace:*",
     "@summarise/queue": "workspace:*"
   },
   "devDependencies": {

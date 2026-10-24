@@ -9,6 +9,7 @@
   "dependencies": {
     "@summarise/config": "workspace:*",
     "@summarise/contract": "workspace:*",
+    "@summarise/logger": "workspace:*",
     "@summarise/queue": "workspace:*",
     "@summarise/storage": "workspace:*",
     "cors": "^2.8.6",

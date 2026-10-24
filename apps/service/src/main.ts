@@ -1,4 +1,5 @@
 import { config } from '@summarise/config';
+import { logger } from '@summarise/logger';
 import { createRedisClient } from '@summarise/queue';
 import { createDatabase } from '@summarise/storage';
 
@@ -10,5 +11,5 @@ const redis = await createRedisClient(config.REDIS_URL);
 const app = createApp({ db, redis, webOrigin: config.WEB_ORIGIN });
 
 app.listen(config.PORT, () => {
-  console.log(`service listening on http://localhost:${config.PORT}`);
+  logger.info({ port: config.PORT }, 'service listening');
 });

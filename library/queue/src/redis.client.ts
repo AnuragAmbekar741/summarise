@@ -1,3 +1,4 @@
+import { logger } from '@summarise/logger';
 import { createClient } from 'redis';
 
 export async function createRedisClient(url: string) {
@@ -6,7 +7,7 @@ export async function createRedisClient(url: string) {
   // Without a listener, a dropped connection crashes the process.
   // node-redis reconnects on its own.
   client.on('error', (error: Error) =>
-    console.error('redis error:', error.message),
+    logger.error({ err: error }, 'redis error'),
   );
   await client.connect();
   return client;

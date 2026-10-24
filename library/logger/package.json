@@ -1,0 +1,14 @@
+{
+  "name": "@summarise/logger",
+  "private": true,
+  "exports": "./src/index.ts",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@summarise/config": "workspace:*",
+    "pino": "^10.4.0",
+    "pino-pretty": "^13.2.0"
+  }
+}

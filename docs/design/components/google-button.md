@@ -3,7 +3,7 @@
 The full-width "Continue with Google" action at the top of the auth card. A
 primary `lg` button with the Google "G" in a white circle.
 
-**Source:** `apps/web/src/components/GoogleButton.tsx`
+**Source:** `apps/web/src/components/google-button/GoogleButton.tsx`
 
 ## Variants
 

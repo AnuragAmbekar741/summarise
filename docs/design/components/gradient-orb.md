@@ -3,7 +3,7 @@
 A soft, blurred pastel circle placed behind content as atmosphere. It holds no
 content and ignores clicks.
 
-**Source:** `apps/web/src/components/GradientOrb.tsx`
+**Source:** `apps/web/src/components/common/GradientOrb.tsx`
 
 ## Variants
 

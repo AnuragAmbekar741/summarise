@@ -3,7 +3,7 @@
 A hairline with "OR" in the middle, separating two alternative ways to do the
 same thing (Google vs email).
 
-**Source:** `apps/web/src/components/OrDivider.tsx`
+**Source:** `apps/web/src/components/common/OrDivider.tsx`
 
 ## Variants
 

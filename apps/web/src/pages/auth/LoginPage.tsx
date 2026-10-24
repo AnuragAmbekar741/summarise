@@ -1,10 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
-import { AuthLayout } from '@/components/AuthLayout';
-import { GoogleButton } from '@/components/GoogleButton';
-import { GradientOrb } from '@/components/GradientOrb';
-import { OrDivider } from '@/components/OrDivider';
+import { AuthLayout } from '@/components/auth-layout/AuthLayout';
+import { GoogleButton } from '@/components/google-button/GoogleButton';
+import { GradientOrb } from '@/components/common/GradientOrb';
+import { OrDivider } from '@/components/common/OrDivider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

@@ -4,7 +4,7 @@ Where a returning user signs in, with Google or with email and password. The
 "Create account" pill in the nav leads to signup.
 
 **Route:** `/login`
-**Source:** `apps/web/src/pages/LoginPage.tsx`
+**Source:** `apps/web/src/pages/auth/LoginPage.tsx`
 
 ## Layout
 

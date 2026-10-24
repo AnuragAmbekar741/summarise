@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import { Logo } from '@/components/Logo';
+import { Logo } from '@/components/common/Logo';
 
 // Spec: docs/design/components/auth-layout.md
 type AuthLayoutProps = {

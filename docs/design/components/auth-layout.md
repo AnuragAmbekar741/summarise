@@ -3,7 +3,7 @@
 The shared frame for the login and signup pages: top nav, a big editorial
 headline on the left, the auth card on the right, with gradient orbs behind.
 
-**Source:** `apps/web/src/components/AuthLayout.tsx`
+**Source:** `apps/web/src/components/auth-layout/AuthLayout.tsx`
 
 ## Structure
 

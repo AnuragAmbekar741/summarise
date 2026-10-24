@@ -5,7 +5,7 @@ password. They must agree to the terms first. The "Log in" pill in the nav leads
 login.
 
 **Route:** `/signup`
-**Source:** `apps/web/src/pages/SignupPage.tsx`
+**Source:** `apps/web/src/pages/auth/SignupPage.tsx`
 
 ## Layout
 

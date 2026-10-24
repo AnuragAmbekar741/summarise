@@ -3,7 +3,7 @@
 The Summarise wordmark: a waveform glyph followed by the name in the display
 serif. Links to `/`.
 
-**Source:** `apps/web/src/components/Logo.tsx`
+**Source:** `apps/web/src/components/common/Logo.tsx`
 
 ## Variants
 

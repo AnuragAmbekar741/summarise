@@ -1,7 +1,6 @@
 import * as React from 'react';
 
 import { Logo } from '@/components/Logo';
-import { WaveLines } from '@/components/WaveLines';
 
 // Spec: docs/design/components/auth-layout.md
 type AuthLayoutProps = {
@@ -25,7 +24,6 @@ export function AuthLayout({
   return (
     <div className="relative flex min-h-svh flex-col overflow-hidden bg-canvas">
       {orbs}
-      <WaveLines className="top-[70%]" />
 
       <header className="relative z-10 flex h-16 items-center justify-between px-4 pt-4 sm:px-12">
         <Logo />

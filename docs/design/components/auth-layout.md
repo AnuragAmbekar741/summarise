@@ -1,8 +1,7 @@
 # Auth layout
 
 The shared frame for the login and signup pages: top nav, a big editorial
-headline on the left, the auth card on the right, with gradient orbs and wave
-lines behind.
+headline on the left, the auth card on the right, with gradient orbs behind.
 
 **Source:** `apps/web/src/components/AuthLayout.tsx`
 
@@ -16,7 +15,6 @@ lines behind.
 │                                        │   card       │   │
 │   description (body-md)                │  (children)  │   │
 │                                        └──────────────┘   │
-│ ~~~~~~~~~~~~~~~~~~~ wave lines ~~~~~~~~~~~~~~~~~~~~~~~~~~ │
 └───────────────────────────────────────────────────────────┘
           orbs sit behind everything, partly off-screen
 ```
@@ -43,7 +41,6 @@ lines behind.
   below the headline.
 - Card: 416px max, `{colors.surface-card}`, 1px `{colors.hairline}` border,
   `{rounded.xxl}` (24px), 32px padding (24px on mobile), `shadow-soft`.
-- Wave lines at 70% of the page height.
 
 ## Responsive
 

@@ -1,0 +1,12 @@
+{
+  "name": "@summarise/queue",
+  "private": true,
+  "exports": "./src/index.ts",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "redis": "^6.3.0"
+  }
+}

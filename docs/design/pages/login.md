@@ -68,4 +68,5 @@ bottom:
 ## States
 
 - Submit is disabled until both email and password are filled.
+- On narrow screens the footer row wraps, putting the link under the text.
 - Loading and error states come with the auth backend.

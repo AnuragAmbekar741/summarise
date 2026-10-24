@@ -101,7 +101,7 @@ export function LoginPage() {
         </Button>
       </form>
 
-      <div className="mt-8 flex items-center justify-between gap-2 border-t border-hairline pt-6">
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-6">
         <span className="text-body-md whitespace-nowrap text-body">
           New to Summarise?
         </span>

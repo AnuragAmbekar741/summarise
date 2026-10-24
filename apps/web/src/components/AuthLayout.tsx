@@ -32,7 +32,7 @@ export function AuthLayout({
         {navAction}
       </header>
 
-      <main className="relative z-10 mx-auto grid w-full max-w-content flex-1 items-center gap-12 px-4 py-12 sm:px-12 lg:grid-cols-[1fr_416px] lg:gap-24">
+      <main className="relative z-10 mx-auto grid w-full max-w-content flex-1 grid-cols-1 items-center gap-12 px-4 py-12 sm:px-12 lg:grid-cols-[1fr_416px] lg:gap-24">
         <section>
           <h1 className="text-display-md sm:text-display-xl lg:text-display-mega">
             {headline}

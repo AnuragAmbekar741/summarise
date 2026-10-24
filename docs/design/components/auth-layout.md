@@ -47,7 +47,8 @@ lines behind.
 
 ## Responsive
 
-- Below 1024px the columns stack: headline first, card below, both centred.
+- Below 1024px the columns stack: headline first, card below, both centred and
+  never wider than the screen.
 - Orbs keep their positions (percentages), so they shrink into view on small
   screens.
 

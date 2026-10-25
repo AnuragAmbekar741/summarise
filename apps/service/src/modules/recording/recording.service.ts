@@ -7,6 +7,7 @@ import {
   SpeechToTextError,
   type SpeechToText,
 } from '@summarise/speech-to-text';
+import { logger } from '@summarise/logger';
 import type { Note } from '@summarise/storage';
 
 import { HttpError } from '../../common/error.utils';
@@ -99,6 +100,8 @@ async function transcribe(
     return await speechToText.transcribe(input);
   } catch (error) {
     if (!(error instanceof SpeechToTextError)) throw error;
+    // The client only sees a generic message; keep the provider's for us.
+    logger.warn({ err: error }, 'speech-to-text failed');
     if (error.retryable) {
       const seconds = error.retryAfterSeconds ?? DEFAULT_RETRY_AFTER_SECONDS;
       throw new HttpError(

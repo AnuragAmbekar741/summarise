@@ -9,6 +9,8 @@ export const ConfigSchema = z.object({
   WEB_ORIGIN: z.url().default('http://localhost:5173'),
   DATABASE_URL: z.url(),
   REDIS_URL: z.url(),
+  // Signs access tokens. Generate with `openssl rand -base64 32`.
+  JWT_ACCESS_SECRET: z.string().min(32),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

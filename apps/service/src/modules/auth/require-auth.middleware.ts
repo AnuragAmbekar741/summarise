@@ -2,7 +2,7 @@ import type { RequestHandler } from 'express';
 
 import { HttpError } from '../../common/error.utils';
 import { ACCESS_TOKEN_COOKIE } from './auth.constants';
-import type { Tokens } from './token.utils';
+import type { Tokens } from './utils/token.utils';
 
 // Lets the request through only with a valid access cookie, and sets
 // req.userId for the handlers after it.

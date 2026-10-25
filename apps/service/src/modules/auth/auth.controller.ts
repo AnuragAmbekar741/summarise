@@ -12,8 +12,8 @@ import {
   clearAuthCookies,
   setAccessCookie,
   setRefreshCookie,
-} from './auth.utils';
-import type { Tokens } from './token.utils';
+} from './utils/auth.utils';
+import type { Tokens } from './utils/token.utils';
 
 type AuthControllerDeps = {
   authService: AuthService;

@@ -4,8 +4,8 @@ import { createDatabase } from '@summarise/storage';
 import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { createApp } from '../../app';
-import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './auth.constants';
+import { createApp } from '../../../app';
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '../auth.constants';
 
 // Runs against the real Postgres and Redis from docker compose. Each test
 // signs up its own random email and deletes it afterwards, so local data is

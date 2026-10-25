@@ -3,7 +3,7 @@ import { jwtVerify, SignJWT } from 'jose';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   REFRESH_TOKEN_TTL_SECONDS,
-} from './auth.constants';
+} from '../auth.constants';
 
 type TokenType = 'access' | 'refresh';
 type TokenSecrets = { accessSecret: string; refreshSecret: string };

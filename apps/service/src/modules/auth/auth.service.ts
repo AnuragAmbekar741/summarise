@@ -2,7 +2,7 @@ import type { LoginInput, PublicUser, SignupInput } from '@summarise/contract';
 import type { User, UserRepository } from '@summarise/storage';
 
 import { HttpError } from '../../common/error.utils';
-import { hashPassword, verifyPassword } from './password.utils';
+import { hashPassword, verifyPassword } from './utils/password.utils';
 
 export function createAuthService(users: UserRepository) {
   // Checked when the email is unknown, so a missing account takes as long

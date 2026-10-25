@@ -7,7 +7,7 @@ import { validateBody } from '../../common/validate.middleware';
 import { createAuthController } from './auth.controller';
 import { createAuthService } from './auth.service';
 import { requireAuth } from './require-auth.middleware';
-import { createTokens } from './token.utils';
+import { createTokens } from './utils/token.utils';
 
 export function authRoutes(db: Database, config: Config) {
   const tokens = createTokens({

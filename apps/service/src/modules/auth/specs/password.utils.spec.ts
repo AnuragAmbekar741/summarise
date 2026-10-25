@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { hashPassword, verifyPassword } from './password.utils';
+import { hashPassword, verifyPassword } from '../utils/password.utils';
 
 describe('password utils', () => {
   it('hashes with argon2id', async () => {

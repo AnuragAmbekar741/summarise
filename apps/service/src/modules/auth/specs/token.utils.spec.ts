@@ -4,8 +4,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   ACCESS_TOKEN_TTL_SECONDS,
   REFRESH_TOKEN_TTL_SECONDS,
-} from './auth.constants';
-import { createTokens } from './token.utils';
+} from '../auth.constants';
+import { createTokens } from '../utils/token.utils';
 
 const accessSecret = 'a'.repeat(32);
 const refreshSecret = 'r'.repeat(32);

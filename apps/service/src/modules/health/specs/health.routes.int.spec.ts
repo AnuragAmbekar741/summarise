@@ -4,7 +4,7 @@ import { createDatabase } from '@summarise/storage';
 import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { createApp } from '../../app';
+import { createApp } from '../../../app';
 
 // Runs against the real Postgres and Redis from docker compose.
 describe('GET /health', async () => {

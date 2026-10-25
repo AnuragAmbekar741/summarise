@@ -6,7 +6,7 @@ import {
   REFRESH_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE_PATH,
   REFRESH_TOKEN_TTL_SECONDS,
-} from './auth.constants';
+} from '../auth.constants';
 
 function accessCookie(secure: boolean): CookieOptions {
   return { httpOnly: true, sameSite: 'lax', secure, path: '/' };

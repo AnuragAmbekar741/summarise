@@ -44,6 +44,12 @@ export function createRecordingService({
       audio: AudioFile,
     ): Promise<PublicTranscriptSegment> {
       const note = await noteService.getOwnedNote(userId, noteId);
+
+      if (note.status !== 'recording') {
+        const saved = await transcriptService.getSegment(note.id, input.seq);
+        if (saved) return saved;
+      }
+
       assertAcceptsChunk(note, input.seq);
 
       // Saved before transcribing, so the audio is kept even if that fails.
@@ -53,18 +59,22 @@ export function createRecordingService({
       if (audioKey) await blob.put(audioKey, audio.buffer);
 
       const previous = await transcriptService.previousText(note.id, input.seq);
-      const { text } = await transcribe(speechToText, {
+      const result = await transcribe(speechToText, {
         audio: audio.buffer,
         mimeType: audio.mimetype,
         prompt: previous?.slice(-PROMPT_CHARS),
       });
 
+      // A chunk that can't be transcribed is still saved, flagged, so the
+      // transcript shows a gap, its kept audio stays linked, and the note
+      // can still become ready.
       const segment = await transcriptService.saveSegment({
         noteId: note.id,
         seq: input.seq,
         startMs: input.startMs,
         endMs: input.startMs + input.durationMs,
-        rawText: text,
+        rawText: result.failed ? '' : result.text,
+        transcriptionFailed: result.failed,
         audioKey,
       });
       await transcriptService.markReadyIfComplete(note);
@@ -90,14 +100,18 @@ function assertAcceptsChunk(note: Note, seq: number) {
   );
 }
 
-// Provider failures become HTTP errors the browser can act on: 503 means
-// "keep the chunk and retry later", 502 means retrying won't help.
+type TranscribeResult = { failed: false; text: string } | { failed: true };
+
+// A temporary provider failure becomes a 503 ("keep the chunk and retry
+// later"). A permanent one (the audio itself was rejected) comes back as
+// { failed: true }, since retrying the same audio won't help.
 async function transcribe(
   speechToText: SpeechToText,
   input: Parameters<SpeechToText['transcribe']>[0],
-) {
+): Promise<TranscribeResult> {
   try {
-    return await speechToText.transcribe(input);
+    const { text } = await speechToText.transcribe(input);
+    return { failed: false, text };
   } catch (error) {
     if (!(error instanceof SpeechToTextError)) throw error;
     // The client only sees a generic message; keep the provider's for us.
@@ -112,10 +126,6 @@ async function transcribe(
         { 'Retry-After': String(seconds) },
       );
     }
-    throw new HttpError(
-      502,
-      'TRANSCRIPTION_FAILED',
-      'Could not transcribe this audio',
-    );
+    return { failed: true };
   }
 }

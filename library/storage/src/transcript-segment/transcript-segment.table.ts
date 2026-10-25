@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   pgTable,
   text,
@@ -23,6 +24,9 @@ export const transcriptSegments = pgTable(
     endMs: integer(),
     // Exactly what speech-to-text returned. Never edited.
     rawText: text().notNull(),
+    // Speech-to-text rejected this chunk for good; rawText is empty and the
+    // transcript shows a gap here instead of words.
+    transcriptionFailed: boolean().notNull().default(false),
     editedText: text(),
     // Blob storage key of this chunk's audio, when the note keeps audio.
     audioKey: text(),

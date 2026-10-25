@@ -1,0 +1,1 @@
+ALTER TABLE "transcript_segments" ADD COLUMN "transcription_failed" boolean DEFAULT false NOT NULL;

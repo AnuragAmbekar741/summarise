@@ -36,14 +36,19 @@ export function createTranscriptService({
       return previous ? textOf(previous) : undefined;
     },
 
-    // A stopped note is ready once every expected segment has arrived.
+    async getSegment(
+      noteId: string,
+      seq: number,
+    ): Promise<PublicTranscriptSegment | undefined> {
+      const segment = await segments.findBySeq(noteId, seq);
+      return segment ? toPublicSegment(segment) : undefined;
+    },
+
+    // A stopped note is ready once every expected segment has arrived. The
+    // check runs in the database against current state, not against `note`,
+    // which the caller may have read before a concurrent stop or upload.
     async markReadyIfComplete(note: Note): Promise<Note> {
-      if (note.status !== 'processing' || note.totalChunks === null) {
-        return note;
-      }
-      const count = await segments.countByNote(note.id);
-      if (count < note.totalChunks) return note;
-      return notes.update(note.id, { status: 'ready' });
+      return (await notes.markReadyIfComplete(note.id)) ?? note;
     },
   };
 }
@@ -60,5 +65,6 @@ function toPublicSegment(segment: TranscriptSegment): PublicTranscriptSegment {
     startMs: segment.startMs,
     endMs: segment.endMs,
     text: textOf(segment),
+    transcriptionFailed: segment.transcriptionFailed,
   };
 }

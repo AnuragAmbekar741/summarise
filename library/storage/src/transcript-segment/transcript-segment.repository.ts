@@ -21,6 +21,7 @@ export function createTranscriptSegmentRepository(db: Database) {
             startMs: input.startMs,
             endMs: input.endMs,
             rawText: input.rawText,
+            transcriptionFailed: input.transcriptionFailed ?? false,
             audioKey: input.audioKey,
             updatedAt: new Date(),
           },
@@ -54,6 +55,22 @@ export function createTranscriptSegmentRepository(db: Database) {
         )
         .orderBy(desc(transcriptSegments.seq))
         .limit(1);
+      return segment;
+    },
+
+    async findBySeq(
+      noteId: string,
+      seq: number,
+    ): Promise<TranscriptSegment | undefined> {
+      const [segment] = await db
+        .select()
+        .from(transcriptSegments)
+        .where(
+          and(
+            eq(transcriptSegments.noteId, noteId),
+            eq(transcriptSegments.seq, seq),
+          ),
+        );
       return segment;
     },
 

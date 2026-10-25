@@ -8,6 +8,8 @@ export const TranscriptSegmentSchema = z.object({
   endMs: z.number().int().nullable(),
   // The user's edit if there is one, otherwise the raw transcription.
   text: z.string(),
+  // This part couldn't be transcribed; `text` is empty and the UI shows a gap.
+  transcriptionFailed: z.boolean(),
 });
 
 export const TranscriptResponseSchema = z.object({

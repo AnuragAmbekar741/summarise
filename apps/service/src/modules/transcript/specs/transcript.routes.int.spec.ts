@@ -73,9 +73,27 @@ describe('transcript routes', async () => {
     const response = await agent.get(`/notes/${noteId}/transcript`);
 
     expect(response.body.segments).toEqual([
-      { seq: 0, startMs: 0, endMs: 30_000, text: 'text of chunk 0' },
-      { seq: 1, startMs: 30_000, endMs: 60_000, text: 'text of chunk 1' },
-      { seq: 2, startMs: 60_000, endMs: 90_000, text: 'text of chunk 2' },
+      {
+        seq: 0,
+        startMs: 0,
+        endMs: 30_000,
+        text: 'text of chunk 0',
+        transcriptionFailed: false,
+      },
+      {
+        seq: 1,
+        startMs: 30_000,
+        endMs: 60_000,
+        text: 'text of chunk 1',
+        transcriptionFailed: false,
+      },
+      {
+        seq: 2,
+        startMs: 60_000,
+        endMs: 90_000,
+        text: 'text of chunk 2',
+        transcriptionFailed: false,
+      },
     ]);
   });
 

@@ -21,6 +21,7 @@ export const errorMiddleware: ErrorRequestHandler = (
         ...(error.details !== undefined && { details: error.details }),
       },
     };
+    if (error.headers) res.set(error.headers);
     res.status(error.status).json(body);
     return;
   }

@@ -20,3 +20,20 @@ export function validateBody(schema: z.ZodType): RequestHandler {
     next();
   };
 }
+
+// Checks req.params (e.g. that :noteId is a uuid). Express owns req.params,
+// so the values are checked but not replaced.
+export function validateParams(schema: z.ZodType): RequestHandler {
+  return (req, _res, next) => {
+    const result = schema.safeParse(req.params);
+    if (!result.success) {
+      throw new HttpError(
+        400,
+        'VALIDATION_ERROR',
+        'Invalid request parameters',
+        z.flattenError(result.error).fieldErrors,
+      );
+    }
+    next();
+  };
+}

@@ -5,6 +5,10 @@ import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../../app';
+import {
+  createFakeSpeechToText,
+  createTempBlobStore,
+} from '../../../specs/test.utils';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '../auth.constants';
 
 // Runs against the real Postgres and Redis from docker compose. Each test
@@ -13,7 +17,13 @@ import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '../auth.constants';
 describe('auth routes', async () => {
   const db = createDatabase(config.DATABASE_URL);
   const redis = await createRedisClient(config.REDIS_URL);
-  const app = createApp({ db, redis, config });
+  const app = createApp({
+    db,
+    redis,
+    config,
+    blob: createTempBlobStore().blob,
+    speechToText: createFakeSpeechToText().speechToText,
+  });
   const createdEmails: string[] = [];
 
   afterAll(async () => {

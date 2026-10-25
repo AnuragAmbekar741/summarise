@@ -7,13 +7,9 @@ import { validateBody } from '../../common/validate.middleware';
 import { createAuthController } from './auth.controller';
 import { createAuthService } from './auth.service';
 import { requireAuth } from './require-auth.middleware';
-import { createTokens } from './utils/token.utils';
+import type { Tokens } from './utils/token.utils';
 
-export function authRoutes(db: Database, config: Config) {
-  const tokens = createTokens({
-    accessSecret: config.JWT_ACCESS_SECRET,
-    refreshSecret: config.JWT_REFRESH_SECRET,
-  });
+export function authRoutes(db: Database, config: Config, tokens: Tokens) {
   const controller = createAuthController({
     authService: createAuthService(createUserRepository(db)),
     tokens,

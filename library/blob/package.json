@@ -1,0 +1,13 @@
+{
+  "name": "@summarise/blob",
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc",
+    "test": "vitest run"
+  },
+  "private": true,
+  "exports": "./src/index.ts",
+  "devDependencies": {
+    "vitest": "^5.0.5"
+  }
+}

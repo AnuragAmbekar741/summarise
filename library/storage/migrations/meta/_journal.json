@@ -8,6 +8,20 @@
       "when": 1792895257879,
       "tag": "0000_create_users",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792912024264,
+      "tag": "0001_create_notes_and_transcript_segments",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792924311042,
+      "tag": "0002_add_transcription_failed",
+      "breakpoints": true
     }
   ]
 }

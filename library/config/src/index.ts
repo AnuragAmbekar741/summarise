@@ -1,12 +1,14 @@
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { z } from 'zod';
 
 import { ConfigSchema } from './config.schema';
 
-// .env lives at the repo root, three levels up from this file.
-const ENV_FILE = fileURLToPath(new URL('../../../.env', import.meta.url));
+// The repo root, three levels up from this file. .env lives here.
+const REPO_ROOT = fileURLToPath(new URL('../../../', import.meta.url));
+const ENV_FILE = resolve(REPO_ROOT, '.env');
 if (existsSync(ENV_FILE)) process.loadEnvFile(ENV_FILE);
 
 const result = ConfigSchema.safeParse(process.env);
@@ -14,5 +16,10 @@ if (!result.success) {
   throw new Error(`Invalid environment:\n${z.prettifyError(result.error)}`);
 }
 
-export const config = result.data;
+export const config = {
+  ...result.data,
+  // Each app runs from its own folder, so a relative DATA_DIR is anchored to
+  // the repo root to make every app share one folder.
+  DATA_DIR: resolve(REPO_ROOT, result.data.DATA_DIR),
+};
 export type { Config } from './config.schema';

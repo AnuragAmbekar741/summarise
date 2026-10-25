@@ -18,6 +18,7 @@ import { useLocalSession } from '@/hooks/recorder/useLocalSession';
 import { usePendingChunks } from '@/hooks/recorder/usePendingChunks';
 import { useRecorder } from '@/hooks/recorder/useRecorder';
 import type { RecorderState } from '@/lib/recording/chunk.recorder';
+import { recorderErrorMessage } from '@/lib/recording/recorder.utils';
 import type { LocalSession } from '@/lib/recording/recording.store';
 import { formatDuration, formatNoteDate } from '@/lib/time.utils';
 
@@ -141,18 +142,6 @@ function modeFor({
   // Cut off by a reload or a closed tab: carry on with Resume.
   if (session) return 'paused';
   return 'elsewhere';
-}
-
-function recorderErrorMessage(error: unknown) {
-  if (error instanceof DOMException && error.name === 'NotAllowedError') {
-    return 'Allow microphone access to record.';
-  }
-  if (error instanceof DOMException && error.name === 'NotFoundError') {
-    return 'No microphone found.';
-  }
-  return error instanceof Error
-    ? error.message
-    : 'Something went wrong. Please try again.';
 }
 
 function Message({ text }: { text: string }) {

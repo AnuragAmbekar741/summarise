@@ -5,6 +5,7 @@ import { RequireAuth } from '@/components/route-guard/RequireAuth';
 import { HomePage } from '@/pages/HomePage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { SignupPage } from '@/pages/auth/SignupPage';
+import { NotePage } from '@/pages/note/NotePage';
 
 export function Router() {
   return (
@@ -12,6 +13,7 @@ export function Router() {
       <Routes>
         <Route element={<RequireAuth />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/notes/:noteId" element={<NotePage />} />
         </Route>
         <Route element={<RedirectIfAuthed />}>
           <Route path="/login" element={<LoginPage />} />

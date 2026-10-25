@@ -1,0 +1,21 @@
+import { z } from 'zod';
+
+export const ErrorCodeSchema = z.enum([
+  'VALIDATION_ERROR',
+  'EMAIL_TAKEN',
+  'INVALID_CREDENTIALS',
+  'UNAUTHENTICATED',
+  'INTERNAL',
+]);
+
+// Every non-2xx response from the service has this shape.
+export const ErrorResponseSchema = z.object({
+  error: z.object({
+    code: ErrorCodeSchema,
+    message: z.string(),
+    details: z.unknown().optional(),
+  }),
+});
+
+export type ErrorCode = z.infer<typeof ErrorCodeSchema>;
+export type ErrorResponse = z.infer<typeof ErrorResponseSchema>;

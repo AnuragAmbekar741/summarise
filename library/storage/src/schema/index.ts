@@ -1,2 +1,2 @@
 // Tables go here: one `<module>/<module>.table.ts` per table, re-exported.
-export {};
+export * from '../user/user.table';

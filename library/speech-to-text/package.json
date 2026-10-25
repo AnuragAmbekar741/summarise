@@ -1,0 +1,13 @@
+{
+  "name": "@summarise/speech-to-text",
+  "devDependencies": {
+    "vitest": "^5.0.5"
+  },
+  "exports": "./src/index.ts",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc"
+  },
+  "type": "module"
+}

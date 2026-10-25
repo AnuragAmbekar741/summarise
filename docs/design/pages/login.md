@@ -20,13 +20,14 @@ bottom:
 
 ## Components
 
-| Component                                                             | Variant                     | Where                    |
-| --------------------------------------------------------------------- | --------------------------- | ------------------------ |
-| [`Button`](../components/button.md)                                   | `outline`                   | Nav: "Create account"    |
-| [`GoogleButton`](../components/google-button.md)                      | —                           | Card top                 |
-| [`OrDivider`](../components/or-divider.md)                            | —                           | Between Google and email |
-| [`Label`](../components/label.md) + [`Input`](../components/input.md) | —                           | Email, Password          |
-| [`Button`](../components/button.md)                                   | `outline`, `lg`, full width | Submit: "Log in"         |
+| Component                                                                              | Variant                     | Where                           |
+| -------------------------------------------------------------------------------------- | --------------------------- | ------------------------------- |
+| [`Button`](../components/button.md)                                                    | `outline`                   | Nav: "Create account"           |
+| [`GoogleButton`](../components/google-button.md)                                       | —                           | Card top                        |
+| [`OrDivider`](../components/or-divider.md)                                             | —                           | Between Google and email        |
+| [`Label`](../components/label.md) + [`Input`](../components/input.md)                  | —                           | Email                           |
+| [`Label`](../components/label.md) + [`PasswordInput`](../components/password-input.md) | —                           | Password, with show/hide toggle |
+| [`Button`](../components/button.md)                                                    | `outline`, `lg`, full width | Submit: "Log in"                |
 
 ## Typography & spacing
 
@@ -65,4 +66,12 @@ bottom:
 ## States
 
 - Submit is disabled until both email and password are filled.
-- Loading and error states come with the auth backend.
+- On submit, the fields are checked against `LoginSchema` from
+  `@summarise/contract`. A failing field gets the red input border and a
+  [`FieldError`](../components/field-error.md) under it (e.g. "Enter a valid
+  email").
+- While the request runs, submit is disabled and reads "Logging in…".
+- Server errors (e.g. "Email or password is incorrect") show as an error
+  [toast](../components/toaster.md).
+- On success the user goes to `/`. Signed-in users who open `/login` are sent
+  to `/` too.

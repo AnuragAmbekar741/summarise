@@ -274,7 +274,7 @@ components:
 # Summarise design system
 
 This is the source of truth for how Summarise looks. Every token here maps to a
-CSS variable or Tailwind class in `apps/web/src/index.css`. Each component has
+CSS variable or Tailwind class in `apps/web/src/app/index.css`. Each component has
 its own doc in [`components/`](components/), and each page in [`pages/`](pages/).
 
 ## Overview

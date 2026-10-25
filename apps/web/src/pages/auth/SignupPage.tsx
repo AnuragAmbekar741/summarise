@@ -1,26 +1,42 @@
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { SignupSchema } from '@summarise/contract';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Link } from 'react-router-dom';
+import { z } from 'zod';
 
 import { AuthLayout } from '@/components/auth-layout/AuthLayout';
 import { GoogleButton } from '@/components/google-button/GoogleButton';
+import { FieldError } from '@/components/common/FieldError';
 import { GradientOrb } from '@/components/common/GradientOrb';
 import { OrDivider } from '@/components/common/OrDivider';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
+import { useSignup } from '@/hooks/auth/useSignup';
+
+// The API fields plus the terms box, which only the form needs.
+const SignupFormSchema = SignupSchema.extend({
+  agreed: z.boolean().refine(Boolean, 'Agree to the terms to continue'),
+});
 
 // Spec: docs/design/pages/signup.md
 export function SignupPage() {
-  const [agreed, setAgreed] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    // Wired to the API when the auth backend lands.
-    event.preventDefault();
-  }
+  const signupMutation = useSignup();
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(SignupFormSchema),
+    defaultValues: { agreed: false, name: '', email: '', password: '' },
+  });
+  const [agreed, name, email, password] = useWatch({
+    control,
+    name: ['agreed', 'name', 'email', 'password'],
+  });
 
   return (
     <AuthLayout
@@ -63,11 +79,19 @@ export function SignupPage() {
       </p>
 
       <div className="mt-5 flex gap-3 rounded-xl border border-hairline bg-canvas-soft p-4">
-        <Checkbox
-          id="agree"
-          className="mt-0.5"
-          checked={agreed}
-          onCheckedChange={(checked) => setAgreed(checked === true)}
+        <Controller
+          control={control}
+          name="agreed"
+          render={({ field }) => (
+            <Checkbox
+              id="agree"
+              className="mt-0.5"
+              checked={field.value}
+              onCheckedChange={(checked) => field.onChange(checked === true)}
+              onBlur={field.onBlur}
+              ref={field.ref}
+            />
+          )}
         />
         <label htmlFor="agree" className="text-body-sm text-body">
           I agree to the{' '}
@@ -90,17 +114,25 @@ export function SignupPage() {
         <OrDivider />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      {/* noValidate: the zod schema shows its own messages under each field. */}
+      <form
+        noValidate
+        onSubmit={handleSubmit(({ name, email, password }) =>
+          signupMutation.mutate({ name, email, password }),
+        )}
+        className="flex flex-col gap-4"
+      >
         <div className="flex flex-col gap-2">
           <Label htmlFor="name">Name</Label>
           <Input
             id="name"
             autoComplete="name"
             placeholder="Your name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            aria-invalid={!!errors.name}
+            aria-describedby="name-error"
+            {...register('name')}
           />
+          <FieldError id="name-error" message={errors.name?.message} />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="email">Email</Label>
@@ -109,32 +141,36 @@ export function SignupPage() {
             type="email"
             autoComplete="email"
             placeholder="you@university.edu"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={!!errors.email}
+            aria-describedby="email-error"
+            {...register('email')}
           />
+          <FieldError id="email-error" message={errors.email?.message} />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="password">Password</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="new-password"
             placeholder="At least 8 characters"
-            minLength={8}
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            aria-invalid={!!errors.password}
+            aria-describedby="password-error"
+            {...register('password')}
           />
+          <FieldError id="password-error" message={errors.password?.message} />
         </div>
         <Button
           type="submit"
           variant="outline"
           size="lg"
           className="w-full"
-          disabled={!agreed || !name || !email || password.length < 8}
+          disabled={
+            !agreed || !name || !email || !password || signupMutation.isPending
+          }
         >
-          Create account with email
+          {signupMutation.isPending
+            ? 'Creating account…'
+            : 'Create account with email'}
         </Button>
       </form>
     </AuthLayout>

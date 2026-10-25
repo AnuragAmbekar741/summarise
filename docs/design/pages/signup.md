@@ -21,14 +21,15 @@ bottom:
 
 ## Components
 
-| Component                                                             | Variant                     | Where                               |
-| --------------------------------------------------------------------- | --------------------------- | ----------------------------------- |
-| [`Button`](../components/button.md)                                   | `outline`                   | Nav: "Log in"                       |
-| [`Checkbox`](../components/checkbox.md)                               | —                           | Terms box                           |
-| [`GoogleButton`](../components/google-button.md)                      | —                           | Below the terms box                 |
-| [`OrDivider`](../components/or-divider.md)                            | —                           | Between Google and email            |
-| [`Label`](../components/label.md) + [`Input`](../components/input.md) | —                           | Name, Email, Password               |
-| [`Button`](../components/button.md)                                   | `outline`, `lg`, full width | Submit: "Create account with email" |
+| Component                                                                              | Variant                     | Where                               |
+| -------------------------------------------------------------------------------------- | --------------------------- | ----------------------------------- |
+| [`Button`](../components/button.md)                                                    | `outline`                   | Nav: "Log in"                       |
+| [`Checkbox`](../components/checkbox.md)                                                | —                           | Terms box                           |
+| [`GoogleButton`](../components/google-button.md)                                       | —                           | Below the terms box                 |
+| [`OrDivider`](../components/or-divider.md)                                             | —                           | Between Google and email            |
+| [`Label`](../components/label.md) + [`Input`](../components/input.md)                  | —                           | Name, Email                         |
+| [`Label`](../components/label.md) + [`PasswordInput`](../components/password-input.md) | —                           | Password, with show/hide toggle     |
+| [`Button`](../components/button.md)                                                    | `outline`, `lg`, full width | Submit: "Create account with email" |
 
 ## Typography & spacing
 
@@ -77,6 +78,14 @@ Terms box: `{colors.canvas-soft}` background, 1px `{colors.hairline}` border,
 ## States
 
 - Google button is disabled until the terms box is ticked.
-- Submit is disabled until the terms box is ticked, name and email are filled,
-  and the password has at least 8 characters.
-- Loading and error states come with the auth backend.
+- Submit is disabled until the terms box is ticked and name, email and
+  password are filled.
+- On submit, the fields are checked against `SignupSchema` from
+  `@summarise/contract`. A failing field gets the red input border and a
+  [`FieldError`](../components/field-error.md) under it (e.g. "Use at least 8
+  characters").
+- While the request runs, submit is disabled and reads "Creating account…".
+- Server errors (e.g. "An account with this email already exists") show as an
+  error [toast](../components/toaster.md).
+- On success the user goes to `/`. Signed-in users who open `/signup` are sent
+  to `/` too.

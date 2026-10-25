@@ -9,7 +9,7 @@ with its time.
 
 | `mode`      | Caption (right)               | Last line                                                 |
 | ----------- | ----------------------------- | --------------------------------------------------------- |
-| `recording` | "~40s behind live"            | [`LoadingDots`](loading-dots.md) "Listening…"             |
+| `recording` | —                             | [`LoadingDots`](loading-dots.md) "Listening…"             |
 | `paused`    | —                             | "Transcribing the last part…" while a chunk is on its way |
 | `finishing` | —                             | `LoadingDots` "Transcribing the last part…"               |
 | `ready`     | —                             | —                                                         |

@@ -83,7 +83,6 @@ function captionFor(mode: TranscriptMode, pendingChunks: number) {
   if (pendingChunks > 0) {
     return `${pendingChunks} ${pendingChunks === 1 ? 'part' : 'parts'} uploading`;
   }
-  if (mode === 'recording') return '~40s behind live';
   if (mode === 'elsewhere') return 'Recording on another device';
   return null;
 }

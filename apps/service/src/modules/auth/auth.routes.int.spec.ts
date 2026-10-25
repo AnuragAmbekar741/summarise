@@ -5,7 +5,7 @@ import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../../app';
-import { ACCESS_TOKEN_COOKIE } from './auth.constants';
+import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from './auth.constants';
 
 // Runs against the real Postgres and Redis from docker compose. Each test
 // signs up its own random email and deletes it afterwards, so local data is
@@ -39,8 +39,15 @@ describe('auth routes', async () => {
     return cookies.find((cookie) => cookie.startsWith(`${name}=`));
   }
 
+  // "name=value" from a Set-Cookie header, ready to send back.
+  function cookiePair(response: request.Response, name: string) {
+    const cookie = cookieFrom(response, name);
+    if (!cookie) throw new Error(`no ${name} cookie`);
+    return cookie.split(';')[0]!;
+  }
+
   describe('POST /auth/signup', () => {
-    it('creates the user and sets the access cookie', async () => {
+    it('creates the user and sets both cookies', async () => {
       const user = newUser();
 
       const response = await signup(user);
@@ -52,9 +59,13 @@ describe('auth routes', async () => {
         email: user.email,
         createdAt: expect.any(String),
       });
-      const cookie = cookieFrom(response, ACCESS_TOKEN_COOKIE);
-      expect(cookie).toContain('HttpOnly');
-      expect(cookie).toContain('SameSite=Lax');
+      const access = cookieFrom(response, ACCESS_TOKEN_COOKIE);
+      expect(access).toContain('HttpOnly');
+      expect(access).toContain('SameSite=Lax');
+      expect(access).toContain('Path=/;');
+      const refresh = cookieFrom(response, REFRESH_TOKEN_COOKIE);
+      expect(refresh).toContain('HttpOnly');
+      expect(refresh).toContain('Path=/auth;');
     });
 
     it('normalises the email', async () => {
@@ -118,6 +129,7 @@ describe('auth routes', async () => {
       expect(response.status).toBe(200);
       expect(response.body.user.email).toBe(user.email);
       expect(cookieFrom(response, ACCESS_TOKEN_COOKIE)).toBeDefined();
+      expect(cookieFrom(response, REFRESH_TOKEN_COOKIE)).toBeDefined();
     });
 
     it('rejects a wrong password with 401', async () => {
@@ -171,8 +183,75 @@ describe('auth routes', async () => {
     });
   });
 
+  describe('POST /auth/refresh', () => {
+    it('issues a new access token and keeps the refresh token', async () => {
+      const agent = request.agent(app);
+      const user = newUser();
+      await agent.post('/auth/signup').send(user);
+
+      const response = await agent.post('/auth/refresh');
+
+      expect(response.status).toBe(200);
+      expect(response.body.user.email).toBe(user.email);
+      expect(cookieFrom(response, ACCESS_TOKEN_COOKIE)).toContain('HttpOnly');
+      expect(cookieFrom(response, REFRESH_TOKEN_COOKIE)).toBeUndefined();
+    });
+
+    it('works with only the refresh cookie, and its access token works', async () => {
+      const signupResponse = await signup(newUser());
+      const refresh = cookiePair(signupResponse, REFRESH_TOKEN_COOKIE);
+
+      const response = await request(app)
+        .post('/auth/refresh')
+        .set('Cookie', refresh);
+      const me = await request(app)
+        .get('/auth/me')
+        .set('Cookie', cookiePair(response, ACCESS_TOKEN_COOKIE));
+
+      expect(response.status).toBe(200);
+      expect(me.status).toBe(200);
+      expect(me.body.user.id).toBe(signupResponse.body.user.id);
+    });
+
+    it('returns 401 without a refresh cookie', async () => {
+      const response = await request(app).post('/auth/refresh');
+
+      expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe('UNAUTHENTICATED');
+      expect(cookieFrom(response, ACCESS_TOKEN_COOKIE)).toContain('Expires=');
+      expect(cookieFrom(response, REFRESH_TOKEN_COOKIE)).toContain('Expires=');
+    });
+
+    it('rejects an access token sent as the refresh cookie', async () => {
+      const signupResponse = await signup(newUser());
+      const access = cookiePair(signupResponse, ACCESS_TOKEN_COOKIE).split(
+        '=',
+      )[1];
+
+      const response = await request(app)
+        .post('/auth/refresh')
+        .set('Cookie', `${REFRESH_TOKEN_COOKIE}=${access}`);
+
+      expect(response.status).toBe(401);
+    });
+
+    it('returns 401 once the user is deleted', async () => {
+      const agent = request.agent(app);
+      const user = newUser();
+      await agent.post('/auth/signup').send(user);
+      await db.$client.query('delete from users where email = $1', [
+        user.email,
+      ]);
+
+      const response = await agent.post('/auth/refresh');
+
+      expect(response.status).toBe(401);
+      expect(cookieFrom(response, REFRESH_TOKEN_COOKIE)).toContain('Expires=');
+    });
+  });
+
   describe('POST /auth/logout', () => {
-    it('clears the cookie so /auth/me fails', async () => {
+    it('clears both cookies so /auth/me and /auth/refresh fail', async () => {
       const agent = request.agent(app);
       await agent.post('/auth/signup').send(newUser());
 
@@ -180,7 +259,9 @@ describe('auth routes', async () => {
 
       expect(response.status).toBe(204);
       expect(cookieFrom(response, ACCESS_TOKEN_COOKIE)).toContain('Expires=');
+      expect(cookieFrom(response, REFRESH_TOKEN_COOKIE)).toContain('Expires=');
       expect((await agent.get('/auth/me')).status).toBe(401);
+      expect((await agent.post('/auth/refresh')).status).toBe(401);
     });
   });
 });

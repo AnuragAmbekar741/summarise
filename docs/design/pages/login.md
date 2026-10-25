@@ -20,13 +20,14 @@ bottom:
 
 ## Components
 
-| Component                                                             | Variant                     | Where                    |
-| --------------------------------------------------------------------- | --------------------------- | ------------------------ |
-| [`Button`](../components/button.md)                                   | `outline`                   | Nav: "Create account"    |
-| [`GoogleButton`](../components/google-button.md)                      | —                           | Card top                 |
-| [`OrDivider`](../components/or-divider.md)                            | —                           | Between Google and email |
-| [`Label`](../components/label.md) + [`Input`](../components/input.md) | —                           | Email, Password          |
-| [`Button`](../components/button.md)                                   | `outline`, `lg`, full width | Submit: "Log in"         |
+| Component                                                                              | Variant                     | Where                           |
+| -------------------------------------------------------------------------------------- | --------------------------- | ------------------------------- |
+| [`Button`](../components/button.md)                                                    | `outline`                   | Nav: "Create account"           |
+| [`GoogleButton`](../components/google-button.md)                                       | —                           | Card top                        |
+| [`OrDivider`](../components/or-divider.md)                                             | —                           | Between Google and email        |
+| [`Label`](../components/label.md) + [`Input`](../components/input.md)                  | —                           | Email                           |
+| [`Label`](../components/label.md) + [`PasswordInput`](../components/password-input.md) | —                           | Password, with show/hide toggle |
+| [`Button`](../components/button.md)                                                    | `outline`, `lg`, full width | Submit: "Log in"                |
 
 ## Typography & spacing
 

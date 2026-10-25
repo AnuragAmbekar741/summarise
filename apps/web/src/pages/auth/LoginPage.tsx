@@ -11,6 +11,7 @@ import { OrDivider } from '@/components/common/OrDivider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from '@/components/ui/password-input';
 import { useLogin } from '@/hooks/auth/useLogin';
 
 // Spec: docs/design/pages/login.md
@@ -96,9 +97,8 @@ export function LoginPage() {
         </div>
         <div className="flex flex-col gap-3">
           <Label htmlFor="password">Password</Label>
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             autoComplete="current-password"
             placeholder="Your password"
             aria-invalid={!!errors.password}

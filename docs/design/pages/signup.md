@@ -21,14 +21,15 @@ bottom:
 
 ## Components
 
-| Component                                                             | Variant                     | Where                               |
-| --------------------------------------------------------------------- | --------------------------- | ----------------------------------- |
-| [`Button`](../components/button.md)                                   | `outline`                   | Nav: "Log in"                       |
-| [`Checkbox`](../components/checkbox.md)                               | —                           | Terms box                           |
-| [`GoogleButton`](../components/google-button.md)                      | —                           | Below the terms box                 |
-| [`OrDivider`](../components/or-divider.md)                            | —                           | Between Google and email            |
-| [`Label`](../components/label.md) + [`Input`](../components/input.md) | —                           | Name, Email, Password               |
-| [`Button`](../components/button.md)                                   | `outline`, `lg`, full width | Submit: "Create account with email" |
+| Component                                                                              | Variant                     | Where                               |
+| -------------------------------------------------------------------------------------- | --------------------------- | ----------------------------------- |
+| [`Button`](../components/button.md)                                                    | `outline`                   | Nav: "Log in"                       |
+| [`Checkbox`](../components/checkbox.md)                                                | —                           | Terms box                           |
+| [`GoogleButton`](../components/google-button.md)                                       | —                           | Below the terms box                 |
+| [`OrDivider`](../components/or-divider.md)                                             | —                           | Between Google and email            |
+| [`Label`](../components/label.md) + [`Input`](../components/input.md)                  | —                           | Name, Email                         |
+| [`Label`](../components/label.md) + [`PasswordInput`](../components/password-input.md) | —                           | Password, with show/hide toggle     |
+| [`Button`](../components/button.md)                                                    | `outline`, `lg`, full width | Submit: "Create account with email" |
 
 ## Typography & spacing
 

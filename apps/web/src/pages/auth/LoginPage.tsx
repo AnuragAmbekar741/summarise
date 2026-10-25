@@ -1,23 +1,34 @@
-import { useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { LoginSchema } from '@summarise/contract';
+import { useForm, useWatch } from 'react-hook-form';
 import { Link } from 'react-router-dom';
 
 import { AuthLayout } from '@/components/auth-layout/AuthLayout';
 import { GoogleButton } from '@/components/google-button/GoogleButton';
+import { FieldError } from '@/components/common/FieldError';
 import { GradientOrb } from '@/components/common/GradientOrb';
 import { OrDivider } from '@/components/common/OrDivider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useLogin } from '@/hooks/auth/useLogin';
 
 // Spec: docs/design/pages/login.md
 export function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    // Wired to the API when the auth backend lands.
-    event.preventDefault();
-  }
+  const loginMutation = useLogin();
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(LoginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+  const [email, password] = useWatch({
+    control,
+    name: ['email', 'password'],
+  });
 
   return (
     <AuthLayout
@@ -64,7 +75,12 @@ export function LoginPage() {
         <OrDivider />
       </div>
 
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      {/* noValidate: the zod schema shows its own messages under each field. */}
+      <form
+        noValidate
+        onSubmit={handleSubmit((values) => loginMutation.mutate(values))}
+        className="flex flex-col gap-5"
+      >
         <div className="flex flex-col gap-3">
           <Label htmlFor="email">Email</Label>
           <Input
@@ -72,10 +88,11 @@ export function LoginPage() {
             type="email"
             autoComplete="email"
             placeholder="you@university.edu"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            aria-invalid={!!errors.email}
+            aria-describedby="email-error"
+            {...register('email')}
           />
+          <FieldError id="email-error" message={errors.email?.message} />
         </div>
         <div className="flex flex-col gap-3">
           <Label htmlFor="password">Password</Label>
@@ -84,19 +101,20 @@ export function LoginPage() {
             type="password"
             autoComplete="current-password"
             placeholder="Your password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            aria-invalid={!!errors.password}
+            aria-describedby="password-error"
+            {...register('password')}
           />
+          <FieldError id="password-error" message={errors.password?.message} />
         </div>
         <Button
           type="submit"
           variant="outline"
           size="lg"
           className="mt-1 w-full"
-          disabled={!email || !password}
+          disabled={!email || !password || loginMutation.isPending}
         >
-          Log in
+          {loginMutation.isPending ? 'Logging in…' : 'Log in'}
         </Button>
       </form>
     </AuthLayout>

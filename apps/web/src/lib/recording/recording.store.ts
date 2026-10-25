@@ -35,3 +35,30 @@ recordingDb.version(1).stores({
   chunks: '[noteId+seq], noteId, createdAt',
   sessions: 'noteId',
 });
+
+// Gives the chunk the session's next seq and saves both together, so a seq
+// is never used twice, even if the tab dies halfway.
+export async function saveChunk(
+  noteId: string,
+  chunk: Omit<LocalChunk, 'noteId' | 'seq' | 'createdAt'>,
+) {
+  await recordingDb.transaction(
+    'rw',
+    recordingDb.chunks,
+    recordingDb.sessions,
+    async () => {
+      const session = await recordingDb.sessions.get(noteId);
+      if (!session) throw new Error(`No recording session for note ${noteId}`);
+      await recordingDb.chunks.put({
+        ...chunk,
+        noteId,
+        seq: session.nextSeq,
+        createdAt: Date.now(),
+      });
+      await recordingDb.sessions.update(noteId, {
+        nextSeq: session.nextSeq + 1,
+        elapsedMs: chunk.startMs + chunk.durationMs,
+      });
+    },
+  );
+}

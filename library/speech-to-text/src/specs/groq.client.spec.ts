@@ -76,6 +76,18 @@ describe('groq speech-to-text', () => {
     }
   });
 
+  it('marks an unreadable or text-less success reply as retryable', async () => {
+    for (const reply of [
+      new Response('<html>proxy error</html>', { status: 200 }),
+      Response.json({ unexpected: true }),
+    ]) {
+      const { stt } = groqWith(reply);
+      await expect(
+        stt.transcribe({ audio, mimeType: 'audio/webm' }),
+      ).rejects.toMatchObject({ name: 'SpeechToTextError', retryable: true });
+    }
+  });
+
   it('marks a 400 as not retryable', async () => {
     const { stt } = groqWith(new Response('bad file', { status: 400 }));
 

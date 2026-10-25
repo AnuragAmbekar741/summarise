@@ -66,8 +66,23 @@ export function createGroqSpeechToText({
         );
       }
 
-      const body = (await response.json()) as { text?: unknown };
-      return { text: typeof body.text === 'string' ? body.text.trim() : '' };
+      // A 2xx that isn't the expected JSON (a proxy error page, a cut-off
+      // body) is a provider hiccup, not bad audio: worth retrying.
+      let body: { text?: unknown };
+      try {
+        body = (await response.json()) as { text?: unknown };
+      } catch (error) {
+        throw new SpeechToTextError('Groq returned an unreadable response', {
+          retryable: true,
+          cause: error,
+        });
+      }
+      if (typeof body.text !== 'string') {
+        throw new SpeechToTextError('Groq response had no text', {
+          retryable: true,
+        });
+      }
+      return { text: body.text.trim() };
     },
   };
 }

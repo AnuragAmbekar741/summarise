@@ -32,6 +32,9 @@ type ChunkRecorderOptions = {
   onChunk: (chunk: RecordedChunk) => Promise<void> | void;
   // Recording time so far, when carrying on a recording after a reload.
   elapsedMs?: number;
+  // Called after the recorder paused itself because the mic went away
+  // (unplugged, Bluetooth dropped, permission revoked).
+  onInterrupted?: () => void;
 };
 
 type Mic = {
@@ -46,6 +49,8 @@ type Segment = {
   parts: Blob[];
   startMs: number;
   startedAt: number;
+  // Resolves on the recorder's stop event, whoever stopped it.
+  stopped: Promise<void>;
 };
 
 export function isRecordingSupported() {
@@ -59,6 +64,7 @@ export function isRecordingSupported() {
 export function createChunkRecorder({
   onChunk,
   elapsedMs: initialElapsedMs = 0,
+  onInterrupted,
 }: ChunkRecorderOptions) {
   const mimeType = pickMimeType();
   if (!mimeType) throw new Error("This browser can't record audio");
@@ -89,12 +95,18 @@ export function createChunkRecorder({
     recorder.ondataavailable = (event) => {
       if (event.data.size > 0) parts.push(event.data);
     };
+    // Listening from the start, so a stop the browser does on its own (the
+    // mic went away) is not missed.
+    const stopped = new Promise<void>((resolve) => {
+      recorder.addEventListener('stop', () => resolve(), { once: true });
+    });
     recorder.start();
     segment = {
       recorder,
       parts,
       startMs: elapsedBeforeSegment,
       startedAt: performance.now(),
+      stopped,
     };
     quietMs = 0;
     lastTickAt = segment.startedAt;
@@ -102,16 +114,14 @@ export function createChunkRecorder({
 
   function endSegment() {
     if (!segment) return;
-    const { recorder, parts, startMs, startedAt } = segment;
+    const { recorder, parts, startMs, startedAt, stopped } = segment;
     const durationMs = Math.round(performance.now() - startedAt);
     elapsedBeforeSegment = startMs + durationMs;
     segment = undefined;
 
-    // The last data arrives just before the recorder's stop event.
-    const stopped = new Promise<void>((resolve) => {
-      recorder.addEventListener('stop', () => resolve(), { once: true });
-    });
-    recorder.stop();
+    // Already stopped if the mic went away; its audio is in parts by now,
+    // because the last data arrives just before the stop event.
+    if (recorder.state !== 'inactive') recorder.stop();
 
     delivering = delivering
       .then(async () => {
@@ -162,8 +172,18 @@ export function createChunkRecorder({
     if (state !== 'recording') return closeMic(opened);
 
     mic = opened;
+    // Fires only when the browser ends the track, not when we stop it.
+    mic.stream
+      .getAudioTracks()[0]
+      ?.addEventListener('ended', onMicLost, { once: true });
     beginSegment(mic.stream);
     ticker = setInterval(tick, TICK_MS);
+  }
+
+  // Same as the user pressing Pause: keep what was recorded, free the mic.
+  function onMicLost() {
+    if (state !== 'recording') return;
+    void pause().then(() => onInterrupted?.());
   }
 
   // Cuts the current chunk now, not at a pause, and turns the mic off so

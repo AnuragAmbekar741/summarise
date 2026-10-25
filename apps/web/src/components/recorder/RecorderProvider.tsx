@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { toast } from 'sonner';
 
 import {
   createChunkRecorder,
@@ -44,6 +45,11 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
       onChunk: async (chunk) => {
         await saveChunk(noteId, chunk);
         queue.wake();
+      },
+      // The recorder paused itself; show it, and say why.
+      onInterrupted: () => {
+        sync();
+        toast.error('Microphone disconnected. Recording paused.');
       },
     });
     activeRef.current = { noteId, recorder };

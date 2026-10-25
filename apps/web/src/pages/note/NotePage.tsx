@@ -23,8 +23,14 @@ import type { LocalSession } from '@/lib/recording/recording.store';
 import { formatDuration, formatNoteDate } from '@/lib/time.utils';
 
 // Spec: docs/design/pages/note.md
+// Keyed by the note, so each note gets fresh page state (e.g. stopClicked
+// never carries over to another note).
 export function NotePage() {
   const { noteId = '' } = useParams();
+  return <NoteView key={noteId} noteId={noteId} />;
+}
+
+function NoteView({ noteId }: { noteId: string }) {
   const note = useNote(noteId);
   const transcript = useTranscript(noteId);
   const session = useLocalSession(noteId);

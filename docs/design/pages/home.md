@@ -8,7 +8,7 @@ can be reopened.
 
 ## Layout
 
-- **Header**, full width, hairline below: logo on the left, account menu on
+- **Header**, full width, no line below: logo on the left, account menu on
   the right. 64px tall (80px from `sm`).
 - **Main**, centred, max 1064px wide: the "Notes" heading with the
   "Start notetaker" pill on the right (wraps below on narrow screens), then

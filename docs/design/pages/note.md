@@ -8,7 +8,7 @@ recording, the header holds the recording controls.
 
 ## Layout
 
-- **Header**, full width, hairline below: back chevron, then the title with the
+- **Header**, full width, no line below: back chevron, then the title with the
   date under it. The recording pill sits on the right and wraps below on
   narrow screens.
 - **Two panes** filling the rest of the viewport, split 50/50 by a hairline.

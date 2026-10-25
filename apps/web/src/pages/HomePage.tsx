@@ -20,7 +20,7 @@ export function HomePage() {
       <GradientOrb color="sky" className="-top-72 right-[18%] size-[720px]" />
       <GradientOrb color="peach" className="-top-64 -right-64 size-[720px]" />
 
-      <header className="relative z-10 flex h-16 items-center justify-between border-b border-hairline px-4 sm:h-20 sm:px-12">
+      <header className="relative z-10 flex h-16 items-center justify-between px-4 sm:h-20 sm:px-12">
         <Logo />
         <AccountMenu />
       </header>

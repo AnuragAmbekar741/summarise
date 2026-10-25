@@ -10,7 +10,10 @@ import { requireAuth } from './require-auth.middleware';
 import { createTokens } from './token.utils';
 
 export function authRoutes(db: Database, config: Config) {
-  const tokens = createTokens({ accessSecret: config.JWT_ACCESS_SECRET });
+  const tokens = createTokens({
+    accessSecret: config.JWT_ACCESS_SECRET,
+    refreshSecret: config.JWT_REFRESH_SECRET,
+  });
   const controller = createAuthController({
     authService: createAuthService(createUserRepository(db)),
     tokens,
@@ -20,6 +23,7 @@ export function authRoutes(db: Database, config: Config) {
   return Router()
     .post('/signup', validateBody(SignupSchema), controller.signup)
     .post('/login', validateBody(LoginSchema), controller.login)
+    .post('/refresh', controller.refresh)
     .post('/logout', controller.logout)
     .get('/me', requireAuth(tokens), controller.me);
 }

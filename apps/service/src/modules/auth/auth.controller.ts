@@ -5,8 +5,14 @@ import type {
 } from '@summarise/contract';
 import type { Request, Response } from 'express';
 
+import { HttpError } from '../../common/error.utils';
+import { REFRESH_TOKEN_COOKIE } from './auth.constants';
 import type { AuthService } from './auth.service';
-import { clearAuthCookies, setAccessCookie } from './auth.utils';
+import {
+  clearAuthCookies,
+  setAccessCookie,
+  setRefreshCookie,
+} from './auth.utils';
 import type { Tokens } from './token.utils';
 
 type AuthControllerDeps = {
@@ -22,6 +28,13 @@ export function createAuthController({
 }: AuthControllerDeps) {
   async function startSession(res: Response, userId: string) {
     setAccessCookie(res, await tokens.signAccessToken(userId), secureCookies);
+    setRefreshCookie(res, await tokens.signRefreshToken(userId), secureCookies);
+  }
+
+  // Clears both cookies so the web app stops retrying with a dead session.
+  function endSession(res: Response): never {
+    clearAuthCookies(res, secureCookies);
+    throw new HttpError(401, 'UNAUTHENTICATED', 'Session expired');
   }
 
   return {
@@ -34,6 +47,27 @@ export function createAuthController({
     async login(req: Request, res: Response<AuthResponse>) {
       const user = await authService.login(req.body as LoginInput);
       await startSession(res, user.id);
+      res.status(200).json({ user });
+    },
+
+    // Issues a new access token only. The refresh token keeps its original
+    // 7-day expiry, so every session ends 7 days after login.
+    async refresh(req: Request, res: Response<AuthResponse>) {
+      const token: unknown = req.cookies?.[REFRESH_TOKEN_COOKIE];
+      const userId =
+        typeof token === 'string'
+          ? await tokens.verifyRefreshToken(token)
+          : null;
+      if (!userId) endSession(res);
+
+      const user = await authService.findUser(userId);
+      if (!user) endSession(res);
+
+      setAccessCookie(
+        res,
+        await tokens.signAccessToken(user.id),
+        secureCookies,
+      );
       res.status(200).json({ user });
     },
 

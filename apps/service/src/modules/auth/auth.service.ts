@@ -9,6 +9,11 @@ export function createAuthService(users: UserRepository) {
   // as a wrong password and the response time doesn't reveal which it was.
   const dummyHash = hashPassword('summarise-dummy-password');
 
+  async function findUser(id: string): Promise<PublicUser | undefined> {
+    const user = await users.findById(id);
+    return user && toPublicUser(user);
+  }
+
   return {
     async signup(input: SignupInput): Promise<PublicUser> {
       if (await users.findByEmail(input.email)) throw emailTaken();
@@ -44,12 +49,14 @@ export function createAuthService(users: UserRepository) {
       return toPublicUser(user);
     },
 
+    findUser,
+
     async getUser(id: string): Promise<PublicUser> {
-      const user = await users.findById(id);
+      const user = await findUser(id);
       if (!user) {
         throw new HttpError(401, 'UNAUTHENTICATED', 'Not signed in');
       }
-      return toPublicUser(user);
+      return user;
     },
   };
 }

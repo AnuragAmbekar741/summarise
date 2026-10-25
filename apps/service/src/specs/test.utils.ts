@@ -4,6 +4,8 @@ import { join } from 'node:path';
 
 import { createLocalBlobStore } from '@summarise/blob';
 import type { SpeechToText, TranscribeInput } from '@summarise/speech-to-text';
+import type { Express } from 'express';
+import request from 'supertest';
 
 // Shared helpers for the service's integration tests.
 
@@ -36,4 +38,17 @@ export function createFakeSpeechToText(
       fail = error;
     },
   };
+}
+
+// Signs up a fresh user on a cookie-keeping agent. The email is pushed onto
+// `emails` so the test can delete the user (and, by cascade, their notes).
+export async function signUpAgent(app: Express, emails: string[]) {
+  const agent = request.agent(app);
+  const email = `test+${crypto.randomUUID()}@example.com`;
+  emails.push(email);
+  await agent
+    .post('/auth/signup')
+    .send({ name: 'Test User', email, password: 'correct horse' })
+    .expect(201);
+  return agent;
 }

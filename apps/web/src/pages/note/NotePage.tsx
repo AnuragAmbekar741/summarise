@@ -60,6 +60,7 @@ export function NotePage() {
     }
   }
 
+  const segments = transcript.data?.segments ?? [];
   const { title, startedAt, durationMs } = note.data;
   const subtitle =
     mode === 'ready' && durationMs !== null
@@ -68,7 +69,7 @@ export function NotePage() {
 
   return (
     <div className="flex min-h-svh flex-col bg-canvas lg:h-svh">
-      <header className="flex flex-wrap items-center justify-between gap-4 border-b border-hairline px-4 py-5 sm:px-8">
+      <header className="flex flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-8">
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <Link
             to="/"
@@ -105,9 +106,11 @@ export function NotePage() {
 
       <main className="grid flex-1 lg:min-h-0 lg:grid-cols-2">
         <TranscriptPane
-          segments={transcript.data?.segments ?? []}
+          segments={segments}
           mode={mode}
           pendingChunks={pendingChunks}
+          // Fewer lines than chunks recorded here: some are still on the way.
+          transcribing={session !== null && segments.length < session.nextSeq}
           className="lg:overflow-y-auto lg:border-r lg:border-hairline"
         />
         <NotesPane

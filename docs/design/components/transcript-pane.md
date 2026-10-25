@@ -7,13 +7,13 @@ with its time.
 
 ## Variants
 
-| `mode`      | Caption (right)               | Last line                                     |
-| ----------- | ----------------------------- | --------------------------------------------- |
-| `recording` | "~40s behind live"            | [`LoadingDots`](loading-dots.md) "Listening…" |
-| `paused`    | —                             | —                                             |
-| `finishing` | —                             | `LoadingDots` "Transcribing the last part…"   |
-| `ready`     | —                             | —                                             |
-| `elsewhere` | "Recording on another device" | —                                             |
+| `mode`      | Caption (right)               | Last line                                                 |
+| ----------- | ----------------------------- | --------------------------------------------------------- |
+| `recording` | "~40s behind live"            | [`LoadingDots`](loading-dots.md) "Listening…"             |
+| `paused`    | —                             | "Transcribing the last part…" while a chunk is on its way |
+| `finishing` | —                             | `LoadingDots` "Transcribing the last part…"               |
+| `ready`     | —                             | —                                                         |
+| `elsewhere` | "Recording on another device" | —                                                         |
 
 While chunks are waiting to upload, the caption reads "2 parts uploading"
 instead.

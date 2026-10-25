@@ -18,6 +18,8 @@ type TranscriptPaneProps = {
   mode: TranscriptMode;
   // Chunks recorded in this browser that haven't uploaded yet.
   pendingChunks: number;
+  // Chunks recorded in this browser that aren't in the transcript yet.
+  transcribing: boolean;
   className?: string;
 };
 
@@ -25,6 +27,7 @@ export function TranscriptPane({
   segments,
   mode,
   pendingChunks,
+  transcribing,
   className,
 }: TranscriptPaneProps) {
   // The next line of the transcript starts where the last one ended.
@@ -59,7 +62,8 @@ export function TranscriptPane({
             <LoadingDots label="Listening…" />
           </Line>
         )}
-        {mode === 'finishing' && (
+        {/* Paused, but the part cut at the pause is still on its way. */}
+        {(mode === 'finishing' || (mode === 'paused' && transcribing)) && (
           <Line ms={nextMs}>
             <LoadingDots label="Transcribing the last part…" />
           </Line>

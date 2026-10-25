@@ -190,10 +190,13 @@ export function createChunkRecorder({
   // the browser's recording indicator goes away.
   async function release() {
     clearInterval(ticker);
+    // Taken before waiting: a quick Resume may open a new mic meanwhile,
+    // and that one must stay open.
+    const current = mic;
+    mic = undefined;
     endSegment();
     await delivering;
-    if (mic) closeMic(mic);
-    mic = undefined;
+    if (current) closeMic(current);
   }
 
   async function pause() {

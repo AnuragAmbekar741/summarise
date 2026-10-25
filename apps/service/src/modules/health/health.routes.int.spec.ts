@@ -10,7 +10,7 @@ import { createApp } from '../../app';
 describe('GET /health', async () => {
   const db = createDatabase(config.DATABASE_URL);
   const redis = await createRedisClient(config.REDIS_URL);
-  const app = createApp({ db, redis, webOrigin: config.WEB_ORIGIN });
+  const app = createApp({ db, redis, config });
 
   afterAll(() => db.$client.end());
 

@@ -1,0 +1,51 @@
+import type {
+  AuthResponse,
+  LoginInput,
+  SignupInput,
+} from '@summarise/contract';
+import type { Request, Response } from 'express';
+
+import type { AuthService } from './auth.service';
+import { clearAuthCookies, setAccessCookie } from './auth.utils';
+import type { Tokens } from './token.utils';
+
+type AuthControllerDeps = {
+  authService: AuthService;
+  tokens: Tokens;
+  secureCookies: boolean;
+};
+
+export function createAuthController({
+  authService,
+  tokens,
+  secureCookies,
+}: AuthControllerDeps) {
+  async function startSession(res: Response, userId: string) {
+    setAccessCookie(res, await tokens.signAccessToken(userId), secureCookies);
+  }
+
+  return {
+    async signup(req: Request, res: Response<AuthResponse>) {
+      const user = await authService.signup(req.body as SignupInput);
+      await startSession(res, user.id);
+      res.status(201).json({ user });
+    },
+
+    async login(req: Request, res: Response<AuthResponse>) {
+      const user = await authService.login(req.body as LoginInput);
+      await startSession(res, user.id);
+      res.status(200).json({ user });
+    },
+
+    logout(_req: Request, res: Response) {
+      clearAuthCookies(res, secureCookies);
+      res.status(204).end();
+    },
+
+    async me(req: Request, res: Response<AuthResponse>) {
+      // requireAuth runs first and sets userId.
+      const user = await authService.getUser(req.userId!);
+      res.status(200).json({ user });
+    },
+  };
+}

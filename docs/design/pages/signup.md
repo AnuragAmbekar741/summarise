@@ -77,6 +77,14 @@ Terms box: `{colors.canvas-soft}` background, 1px `{colors.hairline}` border,
 ## States
 
 - Google button is disabled until the terms box is ticked.
-- Submit is disabled until the terms box is ticked, name and email are filled,
-  and the password has at least 8 characters.
-- Loading and error states come with the auth backend.
+- Submit is disabled until the terms box is ticked and name, email and
+  password are filled.
+- On submit, the fields are checked against `SignupSchema` from
+  `@summarise/contract`. A failing field gets the red input border and a
+  [`FieldError`](../components/field-error.md) under it (e.g. "Use at least 8
+  characters").
+- While the request runs, submit is disabled and reads "Creating account…".
+- Server errors (e.g. "An account with this email already exists") show as an
+  error [toast](../components/toaster.md).
+- On success the user goes to `/`. Signed-in users who open `/signup` are sent
+  to `/` too.

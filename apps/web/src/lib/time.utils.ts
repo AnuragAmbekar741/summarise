@@ -20,23 +20,31 @@ export function formatTimestamp(ms: number) {
 // 4500000 → "1 h 15 min".
 export function formatDuration(ms: number) {
   const minutes = Math.round(ms / 60_000);
-  if (minutes < 1) return 'Under a minute';
+  // Lowercase: it always follows a "·" mid-line.
+  if (minutes < 1) return 'under a minute';
   const hours = Math.floor(minutes / 60);
   if (hours === 0) return `${minutes} min`;
   return minutes % 60 === 0 ? `${hours} h` : `${hours} h ${minutes % 60} min`;
 }
 
-// "Sun, Oct 25 · 10:02am".
-export function formatNoteDate(iso: string) {
-  const date = new Date(iso);
-  const day = date.toLocaleDateString('en-US', {
+// "Sun, Oct 25".
+export function formatDay(iso: string) {
+  return new Date(iso).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
-  const time = date
+}
+
+// "10:02am".
+export function formatTime(iso: string) {
+  return new Date(iso)
     .toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
     .replace(' ', '')
     .toLowerCase();
-  return `${day} · ${time}`;
+}
+
+// "Sun, Oct 25 · 10:02am".
+export function formatNoteDate(iso: string) {
+  return `${formatDay(iso)} · ${formatTime(iso)}`;
 }

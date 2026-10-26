@@ -5,12 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Summarise</title>
     <script>
-      // Follow the system light/dark setting before first paint.
-      const dark = matchMedia('(prefers-color-scheme: dark)');
-      const apply = () =>
-        document.documentElement.classList.toggle('dark', dark.matches);
-      apply();
-      dark.addEventListener('change', apply);
+      // Light or dark before first paint, so there's no flash while React
+      // loads: the choice saved by pressing D, otherwise the system setting.
+      // ThemeProvider takes over from here.
+      {
+        let saved = null;
+        try {
+          saved = localStorage.getItem('theme');
+        } catch {}
+        const dark =
+          saved === 'dark' ||
+          (saved !== 'light' &&
+            matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+      }
     </script>
   </head>
   <body>

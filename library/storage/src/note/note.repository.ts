@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 
 import type { Database } from '../database';
 import { transcriptSegments } from '../transcript-segment/transcript-segment.table';
@@ -22,6 +22,15 @@ export function createNoteRepository(db: Database) {
         .from(notes)
         .where(and(eq(notes.id, id), eq(notes.userId, userId)));
       return note;
+    },
+
+    // Newest first; served by the (user_id, created_at) index.
+    listByUser(userId: string): Promise<Note[]> {
+      return db
+        .select()
+        .from(notes)
+        .where(eq(notes.userId, userId))
+        .orderBy(desc(notes.createdAt));
     },
 
     async update(

@@ -55,7 +55,14 @@ export function createApp({ db, redis, config, blob, speechToText }: AppDeps) {
     express()
       .use(helmet())
       // credentials: the web app on another port sends the auth cookies.
-      .use(cors({ origin: config.WEB_ORIGIN, credentials: true }))
+      // exposedHeaders: lets the browser read Retry-After on a 503.
+      .use(
+        cors({
+          origin: config.WEB_ORIGIN,
+          credentials: true,
+          exposedHeaders: ['Retry-After'],
+        }),
+      )
       .use(express.json())
       .use(cookieParser())
       .use('/health', healthRoutes(db, redis))

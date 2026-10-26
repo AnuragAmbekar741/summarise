@@ -1,0 +1,53 @@
+# Home
+
+The Notes page: where a note is started, and where a recording in progress
+can be reopened.
+
+**Route:** `/`
+**Source:** `apps/web/src/pages/HomePage.tsx`
+
+## Layout
+
+- **Header**, full width, no line below: logo on the left, account menu on
+  the right. 64px tall (80px from `sm`).
+- **Main**, centred, max 1064px wide: the "Notes" heading with the
+  "Start notetaker" pill on the right (wraps below on narrow screens), then
+  one live card per unfinished recording.
+
+## Components
+
+| Component                                         | Variant         | Where             |
+| ------------------------------------------------- | --------------- | ----------------- |
+| [`Logo`](../components/logo.md)                   | —               | Header left       |
+| [`AccountMenu`](../components/account-menu.md)    | —               | Header right      |
+| [`Button`](../components/button.md)               | `primary`, `lg` | "Start notetaker" |
+| [`LiveNoteCard`](../components/live-note-card.md) | —               | Below the heading |
+
+## Typography & spacing
+
+| Piece      | Token                                                | Spacing                             |
+| ---------- | ---------------------------------------------------- | ----------------------------------- |
+| Heading    | `{typography.display-mega}` (`display-xl` on mobile) | 56px below the header (48px mobile) |
+| Live cards | —                                                    | 48px below the heading, 16px apart  |
+
+## Atmosphere
+
+| Orb     | Position                      | Size  |
+| ------- | ----------------------------- | ----- |
+| `sky`   | 288px above, 18% from right   | 720px |
+| `peach` | 256px above, 256px past right | 720px |
+
+## Copy
+
+- Heading: "Notes"
+- Button: "Start notetaker" (red record icon), "Starting…" while it works
+
+## States
+
+- **Starting:** the button is disabled and reads "Starting…" while the note
+  is created and the mic turns on, then the note opens.
+- **Recording in this tab:** the button is disabled (one recording at a time)
+  and the live card shows the running clock.
+- **Mic blocked:** a toast says "Allow microphone access to record."; the note
+  still opens, paused, so the user can press Resume.
+- **Nothing recording:** no cards, just the heading and the button.

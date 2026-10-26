@@ -347,7 +347,7 @@ These appear ONLY as soft radial-gradient atmospheric orbs inside `{component.gr
 
 ### Dark theme
 
-Dark mode is turned on by the `.dark` class on `<html>`, which follows the system setting. Every token keeps its name; values come from `colors-dark` above.
+Dark mode is turned on by the `.dark` class on `<html>`. It follows the system setting until the user presses **D**, which switches between light and dark and remembers the choice (see [`ThemeProvider`](components/theme-provider.md)). Every token keeps its name; values come from `colors-dark` above.
 
 | Token           | Light   | Dark    |
 | --------------- | ------- | ------- |

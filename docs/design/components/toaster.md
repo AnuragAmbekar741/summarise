@@ -29,7 +29,7 @@ Every variant shares one card look; only the icon carries colour.
 ## States
 
 - Auto-dismisses after 4 seconds; hover pauses it.
-- **Dark mode:** follows the system setting, like the rest of the app — card
+- **Dark mode:** follows the theme on screen, including one picked with D — card
   `#1c1917`, text `#fafaf9`.
 
 ## Usage

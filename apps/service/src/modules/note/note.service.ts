@@ -41,6 +41,10 @@ export function createNoteService({
       return toPublicNote(await getOwnedNote(userId, noteId));
     },
 
+    async list(userId: string): Promise<PublicNote[]> {
+      return (await notes.listByUser(userId)).map(toPublicNote);
+    },
+
     // Recording ends. Chunks still in flight (seq < totalChunks) are accepted
     // until all have arrived; then the note is ready.
     async stop(

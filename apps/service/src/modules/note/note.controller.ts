@@ -1,6 +1,7 @@
 import type {
   CreateNoteInput,
   NoteResponse,
+  NotesResponse,
   StopNoteInput,
 } from '@summarise/contract';
 import type { Request, Response } from 'express';
@@ -18,6 +19,11 @@ export function createNoteController(noteService: NoteService) {
         req.body as CreateNoteInput,
       );
       res.status(201).json({ note });
+    },
+
+    async list(req: Request, res: Response<NotesResponse>) {
+      const notes = await noteService.list(req.userId!);
+      res.status(200).json({ notes });
     },
 
     async get(req: NoteRequest, res: Response<NoteResponse>) {

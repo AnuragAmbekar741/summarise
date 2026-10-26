@@ -18,6 +18,7 @@ export function noteRoutes(
   // requireAuth is per route: this router also sees /notes/:noteId/chunks
   // and /transcript requests, which check auth themselves.
   return Router()
+    .get('/', requireAuth, controller.list)
     .post('/', requireAuth, validateBody(CreateNoteSchema), controller.create)
     .get(
       '/:noteId',

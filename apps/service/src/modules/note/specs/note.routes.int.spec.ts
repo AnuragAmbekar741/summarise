@@ -89,6 +89,47 @@ describe('note routes', async () => {
     });
   });
 
+  describe('GET /notes', () => {
+    it("lists only the user's own notes, newest first", async () => {
+      const agent = await signUpAgent(app, emails);
+      const other = await signUpAgent(app, emails);
+      await agent.post('/notes').send({ title: 'First' });
+      await other.post('/notes').send({ title: 'Not mine' });
+      await agent.post('/notes').send({ title: 'Second' });
+
+      const response = await agent.get('/notes');
+
+      expect(response.status).toBe(200);
+      expect(
+        response.body.notes.map((note: { title: string }) => note.title),
+      ).toEqual(['Second', 'First']);
+    });
+
+    it('returns the same note shape as GET /notes/:noteId', async () => {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes').send({});
+
+      const response = await agent.get('/notes');
+
+      expect(response.body.notes).toEqual([body.note]);
+    });
+
+    it('returns an empty list for a new user', async () => {
+      const agent = await signUpAgent(app, emails);
+
+      const response = await agent.get('/notes');
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ notes: [] });
+    });
+
+    it('needs a signed-in user', async () => {
+      const response = await request(app).get('/notes');
+
+      expect(response.status).toBe(401);
+    });
+  });
+
   describe('GET /notes/:noteId', () => {
     it('returns the note to its owner', async () => {
       const agent = await signUpAgent(app, emails);

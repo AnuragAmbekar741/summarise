@@ -43,6 +43,11 @@ export const NoteResponseSchema = z.object({
   note: NoteSchema,
 });
 
+// The signed-in user's notes, newest first.
+export const NotesResponseSchema = z.object({
+  notes: z.array(NoteSchema),
+});
+
 export type NoteSource = z.infer<typeof NoteSourceSchema>;
 export type NoteStatus = z.infer<typeof NoteStatusSchema>;
 export type PublicNote = z.infer<typeof NoteSchema>;
@@ -50,3 +55,4 @@ export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
 export type StopNoteInput = z.infer<typeof StopNoteSchema>;
 export type NoteParams = z.infer<typeof NoteParamsSchema>;
 export type NoteResponse = z.infer<typeof NoteResponseSchema>;
+export type NotesResponse = z.infer<typeof NotesResponseSchema>;

@@ -1,30 +1,27 @@
 # Transcript pane
 
-The left pane of a note: the transcript, one line per recorded chunk, each
-with its time.
+The Transcript tab of a note: one line per recorded chunk, each with its
+time. It sits straight on the page, with no card or heading.
 
 **Source:** `apps/web/src/components/note/TranscriptPane.tsx`
 
 ## Variants
 
-| `mode`      | Caption (right)               | Last line                                                 |
-| ----------- | ----------------------------- | --------------------------------------------------------- |
-| `recording` | —                             | [`LoadingDots`](loading-dots.md) "Listening…"             |
-| `paused`    | —                             | "Transcribing the last part…" while a chunk is on its way |
-| `finishing` | —                             | `LoadingDots` "Transcribing the last part…"               |
-| `ready`     | "48 min · 6,210 words"        | —                                                         |
-| `elsewhere` | "Recording on another device" | —                                                         |
+| `mode`      | Last line                                                 |
+| ----------- | --------------------------------------------------------- |
+| `recording` | [`LoadingDots`](loading-dots.md) "Listening…"             |
+| `paused`    | "Transcribing the last part…" while a chunk is on its way |
+| `finishing` | `LoadingDots` "Transcribing the last part…"               |
+| `ready`     | —                                                         |
+| `elsewhere` | —                                                         |
 
-While chunks are waiting to upload, the caption reads "2 parts uploading"
-instead.
+The length, word count and upload progress are on the note's status line.
 
 ## Tokens
 
-- Heading: "TRANSCRIPT", `{typography.caption-uppercase}`, ink
-- Caption: `{typography.caption}`, muted
 - Time: mono 14px, muted, in a 56px column, 16px before the text
 - Text: `{typography.body-md}`, body-strong
-- 24px between lines; first line 32px below the heading
+- 24px between lines
 
 ## States
 
@@ -36,13 +33,7 @@ instead.
 ## Usage
 
 ```tsx
-<TranscriptPane
-  segments={segments}
-  mode="recording"
-  durationMs={null}
-  pendingChunks={0}
-  transcribing={false}
-/>
+<TranscriptPane segments={segments} mode="recording" transcribing={false} />
 ```
 
 ## Do's and Don'ts

@@ -1,63 +1,76 @@
 # Note
 
-One note: its live transcript on the left and its AI notes on the right. While
-recording, the header holds the recording controls; otherwise a status chip.
-The title and description are edited in place.
+One note, in a single column like Home: the title and description (edited in
+place), a status line, then the transcript and the AI notes as two tabs. While
+recording, the controls float at the bottom of the screen.
 
 **Route:** `/notes/:noteId`
 **Source:** `apps/web/src/pages/note/NotePage.tsx`
 
 ## Layout
 
-- **Header**, full width, no line below: back chevron, then the title, the
-  description and the date. The recording pill or status chip sits on the
-  right and wraps below on narrow screens.
-- **Two panes** filling the rest of the viewport, split 50/50. The transcript
-  sits on the canvas; the notes are a raised card. Each pane scrolls on its
-  own. On mobile (below `lg`) they stack: transcript first, notes below.
+- **Header**, as on [Home](home.md): logo left, account menu right.
+- **Main**, centred, max 1064px wide:
+  - "‹ All notes" back link
+  - Title, then description
+  - Status line: [`StatusChip`](../components/status-chip.md), then the date,
+    length and word count
+  - [`Tabs`](../components/tabs.md): Transcript (default) and Notes
+- **Transcript tab:** the lines sit straight on the page, no card.
+- **Notes tab:** the [`NotesPane`](../components/notes-pane.md) card.
+- **Recording controls:** the [`RecordingPill`](../components/recording-pill.md)
+  in a [`FloatingWidget`](../components/floating-widget.md), bottom middle,
+  draggable.
 
 ## Components
 
-| Component                                            | Variant                              | Where      |
-| ---------------------------------------------------- | ------------------------------------ | ---------- |
-| [`EditableText`](../components/editable-text.md)     | Title (`h1`), description            | Header     |
-| [`RecordingPill`](../components/recording-pill.md)   | `recording` / `paused` / `finishing` | Header     |
-| [`StatusChip`](../components/status-chip.md)         | `ready` / `elsewhere`                | Header     |
-| [`TranscriptPane`](../components/transcript-pane.md) | Follows the page state               | Left pane  |
-| [`NotesPane`](../components/notes-pane.md)           | —                                    | Right pane |
+| Component                                            | Variant                              | Where             |
+| ---------------------------------------------------- | ------------------------------------ | ----------------- |
+| [`Logo`](../components/logo.md)                      | —                                    | Header left       |
+| [`AccountMenu`](../components/account-menu.md)       | —                                    | Header right      |
+| [`EditableText`](../components/editable-text.md)     | Title (`h1`), description            | Top of main       |
+| [`StatusChip`](../components/status-chip.md)         | Follows the page state               | Status line       |
+| [`Tabs`](../components/tabs.md)                      | Transcript / Notes                   | Below status line |
+| [`TranscriptPane`](../components/transcript-pane.md) | Follows the page state               | Transcript tab    |
+| [`NotesPane`](../components/notes-pane.md)           | —                                    | Notes tab         |
+| [`FloatingWidget`](../components/floating-widget.md) | —                                    | Bottom middle     |
+| [`RecordingPill`](../components/recording-pill.md)   | `recording` / `paused` / `finishing` | In the widget     |
 
 ## Typography & spacing
 
-| Piece       | Token                                              | Spacing                                |
-| ----------- | -------------------------------------------------- | -------------------------------------- |
-| Title       | `{typography.display-md}` (`display-sm` on mobile) | —                                      |
-| Description | `{typography.body-md}`, body, full width           | 8px below the title                    |
-| Subtitle    | `{typography.caption}`, muted                      | 4px below the description              |
-| Header      | —                                                  | 20px vertical, 32px side (16px mobile) |
-| Panes       | —                                                  | 48px padding (16px / 32px on mobile)   |
+| Piece       | Token                                                | Spacing                                 |
+| ----------- | ---------------------------------------------------- | --------------------------------------- |
+| Back link   | `{typography.nav-link}`, muted (ink on hover)        | 48px below the header (32px mobile)     |
+| Title       | `{typography.display-mega}` (`display-xl` on mobile) | 16px below the back link                |
+| Description | `{typography.body-md}`, body, full width             | 16px below the title                    |
+| Status line | Chip, then `{typography.body-sm}`, muted             | 20px below the description; 16px gap    |
+| Tabs        | —                                                    | 48px below the status line              |
+| Tab content | —                                                    | 32px below the tabs; 96px at the bottom |
 
 ## Atmosphere
 
-Only the notes pane has orbs; see [`NotesPane`](../components/notes-pane.md).
+The same [`PageGradient`](../components/page-gradient.md) as Home. The notes
+card has its own orbs; see [`NotesPane`](../components/notes-pane.md).
 
 ## Copy
 
+- Back link: "All notes"
 - Description placeholder: "Add a description"
-- Subtitle: "Sun, Oct 25 · 10:02am", plus " · 42 min" once ready
-- Back link label (screen readers): "Back to notes"
+- Status line: "Sun, Oct 25 · 3:36pm", plus " · 48 min · 6,210 words" once
+  ready, plus " · 2 parts uploading" while chunks wait to upload
 
 ## States
 
 The page state comes from the service's note status and this browser's
 recorder:
 
-| State       | When                                               | Header           | Notes card |
-| ----------- | -------------------------------------------------- | ---------------- | ---------- |
-| `recording` | This tab is recording the note                     | Pill `recording` | Disabled   |
-| `paused`    | Paused, or cut off by a reload (Resume carries on) | Pill `paused`    | Disabled   |
-| `finishing` | Stop clicked, last chunks still arriving           | Pill `finishing` | Disabled   |
-| `ready`     | Every chunk is transcribed                         | Chip `ready`     | Enabled    |
-| `elsewhere` | Recording in another browser                       | Chip `elsewhere` | Disabled   |
+| State       | When                                               | Chip                  | Floating pill | Notes tab |
+| ----------- | -------------------------------------------------- | --------------------- | ------------- | --------- |
+| `recording` | This tab is recording the note                     | "Recording"           | `recording`   | Disabled  |
+| `paused`    | Paused, or cut off by a reload (Resume carries on) | "Paused"              | `paused`      | Disabled  |
+| `finishing` | Stop clicked, last chunks still arriving           | "Finishing"           | `finishing`   | Disabled  |
+| `ready`     | Every chunk is transcribed                         | "Transcript ready"    | —             | Enabled   |
+| `elsewhere` | Recording in another browser                       | "Recording elsewhere" | —             | Disabled  |
 
 - **Editing:** double-click the title or description (or use the hover
   pencil) and type in place. Enter or clicking away saves, Esc cancels. A

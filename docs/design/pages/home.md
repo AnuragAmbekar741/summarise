@@ -35,10 +35,8 @@ reopened, and every earlier note is listed.
 
 ## Atmosphere
 
-| Orb     | Position                      | Size  |
-| ------- | ----------------------------- | ----- |
-| `sky`   | 288px above, 18% from right   | 720px |
-| `peach` | 256px above, 256px past right | 720px |
+[`PageGradient`](../components/page-gradient.md) at the top right: sky and
+peach in dark mode, a lighter sky alone in light mode.
 
 ## Copy
 

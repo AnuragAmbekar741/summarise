@@ -8,6 +8,7 @@ import { getApiError } from '@/api/error.utils';
 import { EditableText } from '@/components/common/EditableText';
 import { NotesPane } from '@/components/note/NotesPane';
 import { RecordingPill } from '@/components/note/RecordingPill';
+import { StatusChip } from '@/components/note/StatusChip';
 import {
   TranscriptPane,
   type TranscriptMode,
@@ -126,6 +127,9 @@ function NoteView({ noteId }: { noteId: string }) {
               void run(() => recorder.stop(noteId));
             }}
           />
+        )}
+        {(mode === 'ready' || mode === 'elsewhere') && (
+          <StatusChip status={mode} />
         )}
       </header>
 

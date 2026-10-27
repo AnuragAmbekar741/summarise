@@ -15,6 +15,8 @@ const buttonVariants = cva(
           'rounded-full border border-hairline-strong bg-transparent text-ink hover:bg-surface-strong active:bg-surface-strong',
         secondary:
           'rounded-full bg-surface-strong text-ink hover:bg-hairline active:bg-hairline',
+        destructive:
+          'rounded-full bg-destructive text-white hover:bg-destructive/90 active:bg-destructive/90',
         tertiary: 'rounded-full text-ink underline-offset-4 hover:underline',
       },
       size: {

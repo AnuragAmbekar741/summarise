@@ -141,11 +141,11 @@ function NoteView({ noteId }: { noteId: string }) {
           pendingChunks={pendingChunks}
           // Fewer lines than chunks recorded here: some are still on the way.
           transcribing={session !== null && segments.length < session.nextSeq}
-          className="lg:overflow-y-auto lg:border-r lg:border-hairline"
+          className="lg:overflow-y-auto"
         />
         <NotesPane
           canBuild={mode === 'ready'}
-          className="border-t border-hairline lg:overflow-y-auto lg:border-t-0"
+          className="lg:overflow-y-auto lg:pt-8"
         />
       </main>
     </div>

@@ -7,12 +7,15 @@ import {
 } from 'lucide-react';
 import { Toaster as Sonner, type ToasterProps } from 'sonner';
 
+import { useTheme } from '@/hooks/theme/useTheme';
+
 // Spec: docs/design/components/toaster.md
-// theme="system" matches the .dark class, which also follows the system.
+// Follows the theme on screen, including one picked with D.
 function Toaster(props: ToasterProps) {
+  const { resolvedTheme } = useTheme();
   return (
     <Sonner
-      theme="system"
+      theme={resolvedTheme}
       position="top-center"
       className="toaster group"
       icons={{

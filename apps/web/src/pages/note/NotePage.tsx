@@ -105,7 +105,7 @@ function NoteView({ noteId }: { noteId: string }) {
               onSave={(next) =>
                 updateNote.mutate({ description: next || null })
               }
-              className="mt-2 max-w-[640px] text-body-md text-body"
+              className="mt-2 text-body-md text-body"
             />
             <p className="mt-1 text-caption text-muted-foreground">
               {subtitle}

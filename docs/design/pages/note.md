@@ -31,7 +31,7 @@ The title and description are edited in place.
 | Piece       | Token                                              | Spacing                                |
 | ----------- | -------------------------------------------------- | -------------------------------------- |
 | Title       | `{typography.display-md}` (`display-sm` on mobile) | —                                      |
-| Description | `{typography.body-md}`, body, max 640px            | 8px below the title                    |
+| Description | `{typography.body-md}`, body, full width           | 8px below the title                    |
 | Subtitle    | `{typography.caption}`, muted                      | 4px below the description              |
 | Header      | —                                                  | 20px vertical, 32px side (16px mobile) |
 | Panes       | —                                                  | 48px padding (16px / 32px on mobile)   |

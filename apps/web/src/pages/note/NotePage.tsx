@@ -80,7 +80,7 @@ function NoteView({ noteId }: { noteId: string }) {
   return (
     <div className="flex min-h-svh flex-col bg-canvas lg:h-svh">
       <header className="flex flex-wrap items-start justify-between gap-4 px-4 py-5 sm:px-8">
-        <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-4">
+        <div className="flex min-w-0 flex-[1_1_18rem] items-start gap-2 sm:gap-4">
           <Link
             to="/"
             aria-label="Back to notes"

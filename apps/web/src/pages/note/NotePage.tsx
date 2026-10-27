@@ -1,4 +1,8 @@
-import type { NoteStatus } from '@summarise/contract';
+import {
+  NOTE_DESCRIPTION_MAX,
+  NOTE_TITLE_MAX,
+  type NoteStatus,
+} from '@summarise/contract';
 import { ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -94,6 +98,7 @@ function NoteView({ noteId }: { noteId: string }) {
               label="Title"
               value={title}
               required
+              maxLength={NOTE_TITLE_MAX}
               onSave={(next) => updateNote.mutate({ title: next })}
               className="text-display-sm sm:text-display-md"
             />
@@ -102,6 +107,7 @@ function NoteView({ noteId }: { noteId: string }) {
               value={description ?? ''}
               placeholder="Add a description"
               multiline
+              maxLength={NOTE_DESCRIPTION_MAX}
               onSave={(next) =>
                 updateNote.mutate({ description: next || null })
               }

@@ -7,17 +7,19 @@ description. It looks exactly like the text around it until you type.
 
 ## Variants
 
-| Prop          | Effect                                               |
-| ------------- | ---------------------------------------------------- |
-| `as`          | `h1` or `p`; styling comes from `className`          |
-| `multiline`   | Shift+Enter adds a new line; Enter still saves       |
-| `required`    | Clearing it puts the old text back instead of saving |
-| `placeholder` | Shown in muted-soft while the text is empty          |
+| Prop          | Effect                                                                  |
+| ------------- | ----------------------------------------------------------------------- |
+| `as`          | `h1` or `p`; styling comes from `className`                             |
+| `multiline`   | Shift+Enter adds a new line; Enter still saves                          |
+| `required`    | Clearing it puts the old text back instead of saving                    |
+| `maxLength`   | Typing and pasting stop at this length; a counter shows in the last 10% |
+| `placeholder` | Shown in muted-soft while the text is empty                             |
 
 ## Tokens
 
 - Typography and colour: whatever the caller passes; editing never changes them
 - Placeholder: `{colors.muted-soft}`
+- Counter: `{typography.caption}`, muted, 4px below, e.g. "1,980 / 2,000"
 - Pencil: 28px round button, 16px icon, muted; `{colors.surface-strong}` on hover
 
 ## States

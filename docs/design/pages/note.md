@@ -61,7 +61,8 @@ recorder:
 
 - **Editing:** double-click the title or description (or use the hover
   pencil) and type in place. Enter or clicking away saves, Esc cancels. A
-  failed save puts the old text back and shows a toast.
+  failed save puts the old text back and shows a toast. The title stops at
+  200 characters and the description at 2,000.
 - **Loading:** nothing renders until the note has loaded.
 - **Not found:** "This note doesn't exist." with a "Back to notes" link.
 - **Error:** "Couldn't load this note. Please try again."

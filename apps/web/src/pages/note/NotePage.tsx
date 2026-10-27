@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { getApiError } from '@/api/error.utils';
 import { AccountMenu } from '@/components/common/AccountMenu';
 import { EditableText } from '@/components/common/EditableText';
+import { FloatingWidget } from '@/components/common/FloatingWidget';
 import { Logo } from '@/components/common/Logo';
 import { PageGradient } from '@/components/common/PageGradient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -139,21 +140,6 @@ function NoteView({ noteId }: { noteId: string }) {
           </p>
         </div>
 
-        {(mode === 'recording' ||
-          mode === 'paused' ||
-          mode === 'finishing') && (
-          <RecordingPill
-            mode={mode}
-            elapsedMs={isActive ? elapsedMs : (session?.elapsedMs ?? 0)}
-            onPause={() => void run(recorder.pause)}
-            onResume={() => void run(() => recorder.resume(noteId))}
-            onStop={() => {
-              setStopClicked(true);
-              void run(() => recorder.stop(noteId));
-            }}
-          />
-        )}
-
         <Tabs defaultValue="transcript" className="mt-12">
           <TabsList>
             <TabsTrigger value="transcript">Transcript</TabsTrigger>
@@ -177,6 +163,21 @@ function NoteView({ noteId }: { noteId: string }) {
           </TabsContent>
         </Tabs>
       </main>
+
+      {(mode === 'recording' || mode === 'paused' || mode === 'finishing') && (
+        <FloatingWidget label="Recording controls">
+          <RecordingPill
+            mode={mode}
+            elapsedMs={isActive ? elapsedMs : (session?.elapsedMs ?? 0)}
+            onPause={() => void run(recorder.pause)}
+            onResume={() => void run(() => recorder.resume(noteId))}
+            onStop={() => {
+              setStopClicked(true);
+              void run(() => recorder.stop(noteId));
+            }}
+          />
+        </FloatingWidget>
+      )}
     </div>
   );
 }

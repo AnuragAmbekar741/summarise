@@ -61,6 +61,7 @@ describe('note routes', async () => {
       expect(response.body.note).toMatchObject({
         id: expect.any(String),
         title: 'Untitled note',
+        description: null,
         source: 'recording',
         status: 'recording',
         keepAudio: false,
@@ -159,6 +160,67 @@ describe('note routes', async () => {
         404,
       );
       expect((await agent.get('/notes/not-a-uuid')).status).toBe(400);
+    });
+  });
+
+  describe('PATCH /notes/:noteId', () => {
+    it('changes the title and leaves the rest alone', async () => {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes').send({});
+
+      const response = await agent
+        .patch(`/notes/${body.note.id}`)
+        .send({ title: '  Compilers ' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.note).toEqual({ ...body.note, title: 'Compilers' });
+    });
+
+    it('sets the description and clears it with null', async () => {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes').send({});
+      const update = (description: string | null) =>
+        agent.patch(`/notes/${body.note.id}`).send({ description });
+
+      expect((await update('Week 3: parsing')).body.note.description).toBe(
+        'Week 3: parsing',
+      );
+      expect((await update(null)).body.note.description).toBeNull();
+    });
+
+    it('rejects an empty body and a too-long title', async () => {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes').send({});
+
+      const empty = await agent.patch(`/notes/${body.note.id}`).send({});
+      const tooLong = await agent
+        .patch(`/notes/${body.note.id}`)
+        .send({ title: 'a'.repeat(201) });
+
+      expect(empty.status).toBe(400);
+      expect(tooLong.status).toBe(400);
+      expect(Object.keys(tooLong.body.error.details)).toEqual(['title']);
+    });
+
+    it("returns 404 for another user's note", async () => {
+      const owner = await signUpAgent(app, emails);
+      const other = await signUpAgent(app, emails);
+      const { body } = await owner.post('/notes').send({});
+
+      const response = await other
+        .patch(`/notes/${body.note.id}`)
+        .send({ title: 'Mine now' });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error.code).toBe('NOT_FOUND');
+    });
+
+    it('needs a signed-in user', async () => {
+      const response = await request(app)
+        .patch(`/notes/${crypto.randomUUID()}`)
+        .send({ title: 'Nope' });
+
+      expect(response.status).toBe(401);
     });
   });
 

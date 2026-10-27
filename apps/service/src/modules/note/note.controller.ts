@@ -3,6 +3,7 @@ import type {
   NoteResponse,
   NotesResponse,
   StopNoteInput,
+  UpdateNoteInput,
 } from '@summarise/contract';
 import type { Request, Response } from 'express';
 
@@ -28,6 +29,15 @@ export function createNoteController(noteService: NoteService) {
 
     async get(req: NoteRequest, res: Response<NoteResponse>) {
       const note = await noteService.get(req.userId!, req.params.noteId);
+      res.status(200).json({ note });
+    },
+
+    async update(req: NoteRequest, res: Response<NoteResponse>) {
+      const note = await noteService.update(
+        req.userId!,
+        req.params.noteId,
+        req.body as UpdateNoteInput,
+      );
       res.status(200).json({ note });
     },
 

@@ -128,13 +128,33 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
     queue.wake();
   }
 
+  async function discard(noteId: string) {
+    const active = activeRef.current;
+    if (active?.noteId === noteId) {
+      // Its last chunk is saved on the way out; it's dropped just below.
+      const stopping = active.recorder.stop();
+      activeRef.current = null;
+      sync();
+      await stopping;
+    }
+    await recordingDb.transaction(
+      'rw',
+      recordingDb.chunks,
+      recordingDb.sessions,
+      async () => {
+        await recordingDb.chunks.where('noteId').equals(noteId).delete();
+        await recordingDb.sessions.delete(noteId);
+      },
+    );
+  }
+
   function getElapsedMs() {
     return activeRef.current?.recorder.elapsedMs() ?? 0;
   }
 
   return (
     <RecorderContext.Provider
-      value={{ ...status, getElapsedMs, start, pause, resume, stop }}
+      value={{ ...status, getElapsedMs, start, pause, resume, stop, discard }}
     >
       {children}
     </RecorderContext.Provider>

@@ -41,7 +41,7 @@ recording, the controls float at the bottom of the screen.
 | Piece       | Token                                                | Spacing                                 |
 | ----------- | ---------------------------------------------------- | --------------------------------------- |
 | Back link   | `{typography.nav-link}`, muted (ink on hover)        | 48px below the header (32px mobile)     |
-| Title       | `{typography.display-mega}` (`display-xl` on mobile) | 16px below the back link                |
+| Title       | `{typography.display-mega}` (`display-md` on mobile) | 16px below the back link                |
 | Description | `{typography.body-md}`, body, full width             | 16px below the title                    |
 | Status line | Chip, then `{typography.body-sm}`, muted             | 20px below the description; 16px gap    |
 | Tabs        | —                                                    | 48px below the status line              |

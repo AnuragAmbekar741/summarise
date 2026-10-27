@@ -1,8 +1,8 @@
 import { CircleDot } from 'lucide-react';
 
 import { AccountMenu } from '@/components/common/AccountMenu';
-import { GradientOrb } from '@/components/common/GradientOrb';
 import { Logo } from '@/components/common/Logo';
+import { PageGradient } from '@/components/common/PageGradient';
 import { LiveNoteCard } from '@/components/note/LiveNoteCard';
 import { NoteList } from '@/components/note/NoteList';
 import { Button } from '@/components/ui/button';
@@ -26,8 +26,7 @@ export function HomePage() {
 
   return (
     <div className="relative min-h-svh overflow-hidden bg-canvas">
-      <GradientOrb color="sky" className="-top-72 right-[18%] size-[720px]" />
-      <GradientOrb color="peach" className="-top-64 -right-64 size-[720px]" />
+      <PageGradient />
 
       <header className="relative z-10 flex h-16 items-center justify-between px-4 sm:h-20 sm:px-12">
         <Logo />

@@ -1,7 +1,8 @@
 # Recording pill
 
-The recording controls in the note header: a status dot, the recording clock,
-Pause or Resume, and Stop, all in one pill.
+The recording controls of a note: a status dot, the recording clock, Pause or
+Resume, and Stop, all in one pill. On the note page it floats in a
+[`FloatingWidget`](floating-widget.md), bottom middle, and can be dragged.
 
 **Source:** `apps/web/src/components/note/RecordingPill.tsx`
 

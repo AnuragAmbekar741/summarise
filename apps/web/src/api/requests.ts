@@ -30,6 +30,15 @@ export async function putData<T, U = unknown>(
   return data;
 }
 
+export async function patchData<T, U = unknown>(
+  url: string,
+  body: U,
+  options?: RequestOptions,
+) {
+  const { data } = await apiClient.patch<T>(url, body, options);
+  return data;
+}
+
 export async function deleteData<T, U = unknown>(
   url: string,
   body?: U,

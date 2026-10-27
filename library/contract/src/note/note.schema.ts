@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+// The most the service accepts. The web app can stop typing sooner.
+export const NOTE_TITLE_MAX = 200;
+export const NOTE_DESCRIPTION_MAX = 2000;
+
 export const NoteSourceSchema = z.enum(['recording', 'text']);
 
 // recording → processing (stopped, last chunks still arriving) → ready.
@@ -24,7 +28,7 @@ export const CreateNoteSchema = z.object({
     .string()
     .trim()
     .min(1, 'Enter a title')
-    .max(200, 'Use at most 200 characters')
+    .max(NOTE_TITLE_MAX, `Use at most ${NOTE_TITLE_MAX} characters`)
     .optional(),
   // Also save the recording's audio, not just its transcript.
   keepAudio: z.boolean().optional(),
@@ -43,12 +47,15 @@ export const UpdateNoteSchema = z
       .string()
       .trim()
       .min(1, 'Enter a title')
-      .max(200, 'Use at most 200 characters')
+      .max(NOTE_TITLE_MAX, `Use at most ${NOTE_TITLE_MAX} characters`)
       .optional(),
     description: z
       .string()
       .trim()
-      .max(2000, 'Use at most 2000 characters')
+      .max(
+        NOTE_DESCRIPTION_MAX,
+        `Use at most ${NOTE_DESCRIPTION_MAX} characters`,
+      )
       .nullable()
       .optional(),
   })

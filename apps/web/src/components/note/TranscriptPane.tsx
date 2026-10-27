@@ -2,7 +2,6 @@ import type { PublicTranscriptSegment } from '@summarise/contract';
 
 import { LoadingDots } from '@/components/common/LoadingDots';
 import { formatTimestamp } from '@/lib/time.utils';
-import { cn } from '@/lib/utils';
 
 // Spec: docs/design/components/transcript-pane.md
 export type TranscriptMode =
@@ -16,8 +15,6 @@ export type TranscriptMode =
 type TranscriptPaneProps = {
   segments: PublicTranscriptSegment[];
   mode: TranscriptMode;
-  // Chunks recorded in this browser that haven't uploaded yet.
-  pendingChunks: number;
   // Chunks recorded in this browser that aren't in the transcript yet.
   transcribing: boolean;
   className?: string;
@@ -26,7 +23,6 @@ type TranscriptPaneProps = {
 export function TranscriptPane({
   segments,
   mode,
-  pendingChunks,
   transcribing,
   className,
 }: TranscriptPaneProps) {
@@ -34,17 +30,9 @@ export function TranscriptPane({
   const nextMs = segments.at(-1)?.endMs ?? 0;
 
   return (
-    <section className={cn('px-4 py-8 sm:px-12 sm:py-12', className)}>
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="font-sans text-caption-upper text-ink uppercase">
-          Transcript
-        </h2>
-        <p className="text-caption text-muted-foreground">
-          {captionFor(mode, pendingChunks)}
-        </p>
-      </div>
-
-      <ol className="mt-8 space-y-6">
+    // Straight on the page, no card: it's the main reading area.
+    <section className={className}>
+      <ol className="space-y-6">
         {segments.map((segment) => (
           <Line key={segment.seq} ms={segment.startMs}>
             {segment.transcriptionFailed ? (
@@ -71,20 +59,12 @@ export function TranscriptPane({
       </ol>
 
       {mode === 'ready' && segments.length === 0 && (
-        <p className="mt-8 text-body-md text-muted-foreground">
+        <p className="text-body-md text-muted-foreground">
           Nothing was said in this recording.
         </p>
       )}
     </section>
   );
-}
-
-function captionFor(mode: TranscriptMode, pendingChunks: number) {
-  if (pendingChunks > 0) {
-    return `${pendingChunks} ${pendingChunks === 1 ? 'part' : 'parts'} uploading`;
-  }
-  if (mode === 'elsewhere') return 'Recording on another device';
-  return null;
 }
 
 function Line({

@@ -1,24 +1,24 @@
 # Notes pane
 
-The right pane of a note, where the AI notes will appear. For now it shows an
-empty state and the "Build notes" button.
+The Notes tab of a note: a raised card where the AI notes will appear. For now
+it shows an empty state and the "Build notes" button. It's only reachable once
+the transcript is complete; until then the Notes tab is disabled.
 
 **Source:** `apps/web/src/components/note/NotesPane.tsx`
 
-## Variants
-
-| `canBuild` | Text                                                                                          | Button   |
-| ---------- | --------------------------------------------------------------------------------------------- | -------- |
-| `false`    | "Notes appear here after you build them. You can build them once the transcript is complete." | Disabled |
-| `true`     | "The transcript is complete. Build notes from it."                                            | Enabled  |
-
 ## Tokens
 
-- Heading: "NOTES", `{typography.caption-uppercase}`, ink
-- Text: `{typography.body-md}`, muted, max 420px wide, 32px below the heading
-- Button: [`Button`](button.md) `primary`, 24px below the text
+- Card: `{colors.surface-card}`, 1px `{colors.hairline}` border,
+  `{rounded.xxl}`, soft shadow (`shadow-soft`); 40px padding (32px / 24px on
+  mobile)
+- Text: "The transcript is complete. Build notes from it.",
+  `{typography.body-md}`, muted, max 420px wide
+- Button: [`Button`](button.md) `primary`, 24px below the text (does nothing
+  yet)
 
 ## Atmosphere
+
+The orbs sit inside the card and are clipped by it.
 
 | Orb        | Position                      | Size  |
 | ---------- | ----------------------------- | ----- |
@@ -27,11 +27,12 @@ empty state and the "Build notes" button.
 
 ## States
 
-- **Disabled button:** 50% opacity until the transcript is complete.
 - **Dark mode:** orbs dim to 35%.
 
 ## Usage
 
 ```tsx
-<NotesPane canBuild={status === 'ready'} />
+<TabsContent value="notes">
+  <NotesPane />
+</TabsContent>
 ```

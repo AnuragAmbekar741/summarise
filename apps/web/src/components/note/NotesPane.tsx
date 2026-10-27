@@ -3,17 +3,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 // Spec: docs/design/components/notes-pane.md
-type NotesPaneProps = {
-  // True once the transcript is complete.
-  canBuild: boolean;
-  className?: string;
-};
-
-export function NotesPane({ canBuild, className }: NotesPaneProps) {
+// The Notes tab, once the transcript is complete. Generated notes will go
+// here; for now it offers to build them.
+export function NotesPane({ className }: { className?: string }) {
   return (
     <section
       className={cn(
-        'relative overflow-hidden px-4 py-8 sm:px-12 sm:py-12',
+        'relative overflow-hidden rounded-2xl border border-hairline bg-surface-card px-6 py-8 shadow-soft sm:p-10',
         className,
       )}
     >
@@ -24,18 +20,11 @@ export function NotesPane({ canBuild, className }: NotesPaneProps) {
       />
 
       <div className="relative">
-        <h2 className="font-sans text-caption-upper text-ink uppercase">
-          Notes
-        </h2>
-        <p className="mt-8 max-w-[420px] text-body-md text-muted-foreground">
-          {canBuild
-            ? 'The transcript is complete. Build notes from it.'
-            : 'Notes appear here after you build them. You can build them once the transcript is complete.'}
+        <p className="max-w-[420px] text-body-md text-muted-foreground">
+          The transcript is complete. Build notes from it.
         </p>
         {/* Generating the notes is not built yet; the button does nothing. */}
-        <Button className="mt-6" disabled={!canBuild}>
-          Build notes
-        </Button>
+        <Button className="mt-6">Build notes</Button>
       </div>
     </section>
   );

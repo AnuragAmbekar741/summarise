@@ -8,6 +8,7 @@ export const NoteStatusSchema = z.enum(['recording', 'processing', 'ready']);
 export const NoteSchema = z.object({
   id: z.uuid(),
   title: z.string(),
+  description: z.string().nullable(),
   source: NoteSourceSchema,
   status: NoteStatusSchema,
   keepAudio: z.boolean(),
@@ -35,6 +36,27 @@ export const StopNoteSchema = z.object({
   totalChunks: z.number().int().min(0).max(10_000),
 });
 
+// Send only the fields to change; a null description clears it.
+export const UpdateNoteSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(1, 'Enter a title')
+      .max(200, 'Use at most 200 characters')
+      .optional(),
+    description: z
+      .string()
+      .trim()
+      .max(2000, 'Use at most 2000 characters')
+      .nullable()
+      .optional(),
+  })
+  .refine(
+    (input) => input.title !== undefined || input.description !== undefined,
+    'Change the title or the description',
+  );
+
 export const NoteParamsSchema = z.object({
   noteId: z.uuid(),
 });
@@ -53,6 +75,7 @@ export type NoteStatus = z.infer<typeof NoteStatusSchema>;
 export type PublicNote = z.infer<typeof NoteSchema>;
 export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
 export type StopNoteInput = z.infer<typeof StopNoteSchema>;
+export type UpdateNoteInput = z.infer<typeof UpdateNoteSchema>;
 export type NoteParams = z.infer<typeof NoteParamsSchema>;
 export type NoteResponse = z.infer<typeof NoteResponseSchema>;
 export type NotesResponse = z.infer<typeof NotesResponseSchema>;

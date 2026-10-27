@@ -2,6 +2,7 @@ import type {
   CreateNoteInput,
   PublicNote,
   StopNoteInput,
+  UpdateNoteInput,
 } from '@summarise/contract';
 import type { Note, NoteRepository } from '@summarise/storage';
 
@@ -45,6 +46,15 @@ export function createNoteService({
       return (await notes.listByUser(userId)).map(toPublicNote);
     },
 
+    async update(
+      userId: string,
+      noteId: string,
+      input: UpdateNoteInput,
+    ): Promise<PublicNote> {
+      const note = await getOwnedNote(userId, noteId);
+      return toPublicNote(await notes.update(note.id, input));
+    },
+
     // Recording ends. Chunks still in flight (seq < totalChunks) are accepted
     // until all have arrived; then the note is ready.
     async stop(
@@ -81,6 +91,7 @@ function toPublicNote(note: Note): PublicNote {
   return {
     id: note.id,
     title: note.title,
+    description: note.description,
     source: note.source,
     status: note.status,
     keepAudio: note.keepAudio,

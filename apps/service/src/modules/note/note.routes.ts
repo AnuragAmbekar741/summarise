@@ -2,6 +2,7 @@ import {
   CreateNoteSchema,
   NoteParamsSchema,
   StopNoteSchema,
+  UpdateNoteSchema,
 } from '@summarise/contract';
 import { Router, type RequestHandler } from 'express';
 
@@ -25,6 +26,13 @@ export function noteRoutes(
       requireAuth,
       validateParams(NoteParamsSchema),
       controller.get,
+    )
+    .patch(
+      '/:noteId',
+      requireAuth,
+      validateParams(NoteParamsSchema),
+      validateBody(UpdateNoteSchema),
+      controller.update,
     )
     .post(
       '/:noteId/stop',

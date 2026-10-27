@@ -122,7 +122,7 @@ function NoteView({ noteId }: { noteId: string }) {
           required
           maxLength={NOTE_TITLE_MAX}
           onSave={(next) => updateNote.mutate({ title: next })}
-          className="mt-4 text-display-md sm:text-display-mega"
+          className="mt-4 text-display-sm sm:text-display-lg"
         />
         <EditableText
           label="Description"

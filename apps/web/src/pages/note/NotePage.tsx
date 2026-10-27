@@ -1,11 +1,18 @@
-import { NOTE_TITLE_MAX, type NoteStatus } from '@summarise/contract';
+import {
+  NOTE_TITLE_MAX,
+  type NoteStatus,
+  type PublicTranscriptSegment,
+} from '@summarise/contract';
 import { ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { getApiError } from '@/api/error.utils';
+import { AccountMenu } from '@/components/common/AccountMenu';
 import { EditableText } from '@/components/common/EditableText';
+import { Logo } from '@/components/common/Logo';
+import { PageGradient } from '@/components/common/PageGradient';
 import { NotesPane } from '@/components/note/NotesPane';
 import { RecordingPill } from '@/components/note/RecordingPill';
 import { StatusChip } from '@/components/note/StatusChip';
@@ -76,47 +83,59 @@ function NoteView({ noteId }: { noteId: string }) {
 
   const segments = transcript.data?.segments ?? [];
   const { title, description, startedAt, durationMs } = note.data;
-  const subtitle =
-    mode === 'ready' && durationMs !== null
-      ? `${formatNoteDate(startedAt)} · ${formatDuration(durationMs)}`
-      : formatNoteDate(startedAt);
+  // "Sun, Oct 25 · 3:36pm · 48 min · 6,210 words · 2 parts uploading"
+  const meta = [formatNoteDate(startedAt)];
+  if (mode === 'ready') {
+    if (durationMs !== null) meta.push(formatDuration(durationMs));
+    if (segments.length > 0) meta.push(formatWords(countWords(segments)));
+  }
+  if (pendingChunks > 0) {
+    meta.push(
+      `${pendingChunks} ${pendingChunks === 1 ? 'part' : 'parts'} uploading`,
+    );
+  }
 
   return (
-    <div className="flex min-h-svh flex-col bg-canvas lg:h-svh">
-      <header className="flex flex-wrap items-start justify-between gap-4 px-4 py-5 sm:px-8">
-        <div className="flex min-w-0 flex-[1_1_18rem] items-start gap-2 sm:gap-4">
-          <Link
-            to="/"
-            aria-label="Back to notes"
-            className="inline-flex size-10 shrink-0 items-center justify-center rounded-full text-ink transition-colors hover:bg-surface-strong"
-          >
-            <ChevronLeft className="size-5" />
-          </Link>
-          <div className="min-w-0 flex-1">
-            <EditableText
-              as="h1"
-              label="Title"
-              value={title}
-              required
-              maxLength={NOTE_TITLE_MAX}
-              onSave={(next) => updateNote.mutate({ title: next })}
-              className="text-display-sm sm:text-display-md"
-            />
-            <EditableText
-              label="Description"
-              value={description ?? ''}
-              placeholder="Add a description"
-              multiline
-              maxLength={DESCRIPTION_MAX}
-              onSave={(next) =>
-                updateNote.mutate({ description: next || null })
-              }
-              className="mt-2 text-body-md text-body"
-            />
-            <p className="mt-1 text-caption text-muted-foreground">
-              {subtitle}
-            </p>
-          </div>
+    <div className="relative min-h-svh overflow-hidden bg-canvas">
+      <PageGradient />
+
+      <header className="relative z-10 flex h-16 items-center justify-between px-4 sm:h-20 sm:px-12">
+        <Logo />
+        <AccountMenu />
+      </header>
+
+      <main className="relative z-10 mx-auto max-w-[1064px] px-4 pt-8 pb-section sm:px-12 sm:pt-12">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-1 text-nav-link text-muted-foreground transition-colors hover:text-ink"
+        >
+          <ChevronLeft className="size-4" aria-hidden />
+          All notes
+        </Link>
+
+        <EditableText
+          as="h1"
+          label="Title"
+          value={title}
+          required
+          maxLength={NOTE_TITLE_MAX}
+          onSave={(next) => updateNote.mutate({ title: next })}
+          className="mt-4 text-display-xl sm:text-display-mega"
+        />
+        <EditableText
+          label="Description"
+          value={description ?? ''}
+          placeholder="Add a description"
+          multiline
+          maxLength={DESCRIPTION_MAX}
+          onSave={(next) => updateNote.mutate({ description: next || null })}
+          className="mt-4 text-body-md text-body"
+        />
+        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <StatusChip mode={mode} />
+          <p className="text-body-sm text-muted-foreground">
+            {meta.join(' · ')}
+          </p>
         </div>
 
         {(mode === 'recording' ||
@@ -133,25 +152,15 @@ function NoteView({ noteId }: { noteId: string }) {
             }}
           />
         )}
-        {(mode === 'ready' || mode === 'elsewhere') && (
-          <StatusChip status={mode} />
-        )}
-      </header>
 
-      <main className="grid flex-1 lg:min-h-0 lg:grid-cols-2">
         <TranscriptPane
           segments={segments}
           mode={mode}
-          durationMs={durationMs}
-          pendingChunks={pendingChunks}
           // Fewer lines than chunks recorded here: some are still on the way.
           transcribing={session !== null && segments.length < session.nextSeq}
-          className="lg:overflow-y-auto"
+          className="mt-12"
         />
-        <NotesPane
-          canBuild={mode === 'ready'}
-          className="lg:overflow-y-auto lg:pt-8"
-        />
+        <NotesPane canBuild={mode === 'ready'} className="mt-12" />
       </main>
     </div>
   );
@@ -180,6 +189,19 @@ function modeFor({
   // Cut off by a reload or a closed tab: carry on with Resume.
   if (session) return 'paused';
   return 'elsewhere';
+}
+
+function countWords(segments: PublicTranscriptSegment[]) {
+  return segments.reduce(
+    (total, segment) =>
+      total + segment.text.split(/\s+/).filter(Boolean).length,
+    0,
+  );
+}
+
+// 6210 → "6,210 words".
+function formatWords(count: number) {
+  return `${count.toLocaleString('en-US')} ${count === 1 ? 'word' : 'words'}`;
 }
 
 function Message({ text }: { text: string }) {

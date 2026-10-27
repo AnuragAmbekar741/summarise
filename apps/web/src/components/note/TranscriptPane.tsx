@@ -1,7 +1,7 @@
 import type { PublicTranscriptSegment } from '@summarise/contract';
 
 import { LoadingDots } from '@/components/common/LoadingDots';
-import { formatDuration, formatTimestamp } from '@/lib/time.utils';
+import { formatTimestamp } from '@/lib/time.utils';
 import { cn } from '@/lib/utils';
 
 // Spec: docs/design/components/transcript-pane.md
@@ -16,10 +16,6 @@ export type TranscriptMode =
 type TranscriptPaneProps = {
   segments: PublicTranscriptSegment[];
   mode: TranscriptMode;
-  // The recording's length, known once it has stopped.
-  durationMs: number | null;
-  // Chunks recorded in this browser that haven't uploaded yet.
-  pendingChunks: number;
   // Chunks recorded in this browser that aren't in the transcript yet.
   transcribing: boolean;
   className?: string;
@@ -28,8 +24,6 @@ type TranscriptPaneProps = {
 export function TranscriptPane({
   segments,
   mode,
-  durationMs,
-  pendingChunks,
   transcribing,
   className,
 }: TranscriptPaneProps) {
@@ -38,14 +32,9 @@ export function TranscriptPane({
 
   return (
     <section className={cn('px-4 py-8 sm:px-12 sm:py-12', className)}>
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="font-sans text-caption-upper text-ink uppercase">
-          Transcript
-        </h2>
-        <p className="text-caption text-muted-foreground">
-          {captionFor({ mode, pendingChunks, segments, durationMs })}
-        </p>
-      </div>
+      <h2 className="font-sans text-caption-upper text-ink uppercase">
+        Transcript
+      </h2>
 
       <ol className="mt-8 space-y-6">
         {segments.map((segment) => (
@@ -79,40 +68,6 @@ export function TranscriptPane({
         </p>
       )}
     </section>
-  );
-}
-
-function captionFor({
-  mode,
-  pendingChunks,
-  segments,
-  durationMs,
-}: {
-  mode: TranscriptMode;
-  pendingChunks: number;
-  segments: PublicTranscriptSegment[];
-  durationMs: number | null;
-}) {
-  if (pendingChunks > 0) {
-    return `${pendingChunks} ${pendingChunks === 1 ? 'part' : 'parts'} uploading`;
-  }
-  if (mode === 'elsewhere') return 'Recording on another device';
-  if (mode === 'ready' && segments.length > 0) {
-    const words = countWords(segments);
-    const length = `${words.toLocaleString('en-US')} ${words === 1 ? 'word' : 'words'}`;
-    // "48 min · 6,210 words"
-    return durationMs === null
-      ? length
-      : `${formatDuration(durationMs)} · ${length}`;
-  }
-  return null;
-}
-
-function countWords(segments: PublicTranscriptSegment[]) {
-  return segments.reduce(
-    (total, segment) =>
-      total + segment.text.split(/\s+/).filter(Boolean).length,
-    0,
   );
 }
 

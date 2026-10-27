@@ -20,7 +20,7 @@ The title and description are edited in place.
 
 | Component                                            | Variant                              | Where      |
 | ---------------------------------------------------- | ------------------------------------ | ---------- |
-| [`EditableText`](../components/editable-text.md)     | Title (`h1`, pencil), description    | Header     |
+| [`EditableText`](../components/editable-text.md)     | Title (`h1`), description            | Header     |
 | [`RecordingPill`](../components/recording-pill.md)   | `recording` / `paused` / `finishing` | Header     |
 | [`StatusChip`](../components/status-chip.md)         | `ready` / `elsewhere`                | Header     |
 | [`TranscriptPane`](../components/transcript-pane.md) | Follows the page state               | Left pane  |
@@ -59,7 +59,7 @@ recorder:
 | `ready`     | Every chunk is transcribed                         | Chip `ready`     | Enabled    |
 | `elsewhere` | Recording in another browser                       | Chip `elsewhere` | Disabled   |
 
-- **Editing:** double-click the title or description (or use the title's
+- **Editing:** double-click the title or description (or use the hover
   pencil) and type in place. Enter or clicking away saves, Esc cancels. A
   failed save puts the old text back and shows a toast.
 - **Loading:** nothing renders until the note has loaded.

@@ -94,7 +94,6 @@ function NoteView({ noteId }: { noteId: string }) {
               label="Title"
               value={title}
               required
-              showPencil
               onSave={(next) => updateNote.mutate({ title: next })}
               className="text-display-sm sm:text-display-md"
             />

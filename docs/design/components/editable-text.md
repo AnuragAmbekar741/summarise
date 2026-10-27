@@ -7,26 +7,28 @@ description. It looks exactly like the text around it until you type.
 
 ## Variants
 
-| Prop          | Effect                                                    |
-| ------------- | --------------------------------------------------------- |
-| `as`          | `h1` or `p`; styling comes from `className`               |
-| `multiline`   | Shift+Enter adds a new line; Enter still saves            |
-| `required`    | Clearing it puts the old text back instead of saving      |
-| `showPencil`  | A pencil after the text, shown on hover, also starts edit |
-| `placeholder` | Shown in muted-soft while the text is empty               |
+| Prop          | Effect                                               |
+| ------------- | ---------------------------------------------------- |
+| `as`          | `h1` or `p`; styling comes from `className`          |
+| `multiline`   | Shift+Enter adds a new line; Enter still saves       |
+| `required`    | Clearing it puts the old text back instead of saving |
+| `placeholder` | Shown in muted-soft while the text is empty          |
 
 ## Tokens
 
 - Typography and colour: whatever the caller passes; editing never changes them
 - Placeholder: `{colors.muted-soft}`
 - Pencil: 28px round button, 16px icon, muted; `{colors.surface-strong}` on hover
-- Focus (before editing): 2px `{colors.ring}`, `{rounded.xs}`
 
 ## States
 
-- **Start editing:** double-click, Enter while focused, or the pencil. A
-  double-click keeps the word it selected; the pencil puts the caret at the end.
-- **Editing:** no border, outline or background; spellcheck on.
+- **Start editing:** double-click, or the pencil that shows on hover (the way
+  in from the keyboard). A double-click keeps the word it selected; the pencil
+  puts the caret at the end. The text itself can't take focus until then, so a
+  single click does nothing.
+- **Editing:** no border, outline or background; spellcheck on. Keys stay in
+  the field, so page shortcuts (D for the theme) don't fire. Pasting drops
+  formatting.
 - **Save:** Enter or clicking away. Text is trimmed; single-line text has its
   spaces collapsed. Unchanged text isn't saved.
 - **Cancel:** Esc puts the old text back.
@@ -40,7 +42,6 @@ description. It looks exactly like the text around it until you type.
   label="Title"
   value={title}
   required
-  showPencil
   onSave={(next) => updateNote.mutate({ title: next })}
   className="text-display-md"
 />

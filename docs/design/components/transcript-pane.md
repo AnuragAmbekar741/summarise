@@ -12,7 +12,7 @@ with its time.
 | `recording` | —                             | [`LoadingDots`](loading-dots.md) "Listening…"             |
 | `paused`    | —                             | "Transcribing the last part…" while a chunk is on its way |
 | `finishing` | —                             | `LoadingDots` "Transcribing the last part…"               |
-| `ready`     | —                             | —                                                         |
+| `ready`     | "48 min · 6,210 words"        | —                                                         |
 | `elsewhere` | "Recording on another device" | —                                                         |
 
 While chunks are waiting to upload, the caption reads "2 parts uploading"
@@ -36,7 +36,13 @@ instead.
 ## Usage
 
 ```tsx
-<TranscriptPane segments={segments} mode="recording" pendingChunks={0} />
+<TranscriptPane
+  segments={segments}
+  mode="recording"
+  durationMs={null}
+  pendingChunks={0}
+  transcribing={false}
+/>
 ```
 
 ## Do's and Don'ts

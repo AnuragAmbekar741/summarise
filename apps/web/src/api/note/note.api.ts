@@ -4,11 +4,12 @@ import type {
   NotesResponse,
   StopNoteInput,
   TranscriptResponse,
+  UpdateNoteInput,
   UploadChunkInput,
   UploadChunkResponse,
 } from '@summarise/contract';
 
-import { getData, postData } from '../requests';
+import { getData, patchData, postData } from '../requests';
 
 // One recorded chunk: its audio plus the fields the service validates.
 export type ChunkUpload = UploadChunkInput & { audio: Blob };
@@ -23,6 +24,10 @@ export function listNotes() {
 
 export function getNote(noteId: string) {
   return getData<NoteResponse>(`/notes/${noteId}`);
+}
+
+export function updateNote(noteId: string, input: UpdateNoteInput) {
+  return patchData<NoteResponse, UpdateNoteInput>(`/notes/${noteId}`, input);
 }
 
 export function stopNote(noteId: string, input: StopNoteInput) {

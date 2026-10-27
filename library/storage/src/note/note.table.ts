@@ -28,6 +28,7 @@ export const notes = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     title: text().notNull().default('Untitled note'),
+    description: text(),
     source: noteSource().notNull().default('recording'),
     status: noteStatus().notNull().default('recording'),
     // Save each chunk's audio to blob storage as well as transcribing it.

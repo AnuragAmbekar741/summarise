@@ -46,6 +46,11 @@ export function createNoteRepository(db: Database) {
       return note;
     },
 
+    // Its transcript segments go with it (on delete cascade).
+    async delete(id: string): Promise<void> {
+      await db.delete(notes).where(eq(notes.id, id));
+    },
+
     // processing → ready once every expected segment exists. One statement,
     // so the status and the segment count are read together at the moment it
     // runs: a stop and the last chunk racing each other can't both miss it.

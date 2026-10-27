@@ -41,6 +41,11 @@ export function createNoteController(noteService: NoteService) {
       res.status(200).json({ note });
     },
 
+    async delete(req: NoteRequest, res: Response) {
+      await noteService.delete(req.userId!, req.params.noteId);
+      res.status(204).end();
+    },
+
     async stop(req: NoteRequest, res: Response<NoteResponse>) {
       const note = await noteService.stop(
         req.userId!,

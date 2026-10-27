@@ -2,7 +2,6 @@ import type { PublicTranscriptSegment } from '@summarise/contract';
 
 import { LoadingDots } from '@/components/common/LoadingDots';
 import { formatTimestamp } from '@/lib/time.utils';
-import { cn } from '@/lib/utils';
 
 // Spec: docs/design/components/transcript-pane.md
 export type TranscriptMode =
@@ -31,12 +30,9 @@ export function TranscriptPane({
   const nextMs = segments.at(-1)?.endMs ?? 0;
 
   return (
-    <section className={cn('px-4 py-8 sm:px-12 sm:py-12', className)}>
-      <h2 className="font-sans text-caption-upper text-ink uppercase">
-        Transcript
-      </h2>
-
-      <ol className="mt-8 space-y-6">
+    // Straight on the page, no card: it's the main reading area.
+    <section className={className}>
+      <ol className="space-y-6">
         {segments.map((segment) => (
           <Line key={segment.seq} ms={segment.startMs}>
             {segment.transcriptionFailed ? (
@@ -63,7 +59,7 @@ export function TranscriptPane({
       </ol>
 
       {mode === 'ready' && segments.length === 0 && (
-        <p className="mt-8 text-body-md text-muted-foreground">
+        <p className="text-body-md text-muted-foreground">
           Nothing was said in this recording.
         </p>
       )}

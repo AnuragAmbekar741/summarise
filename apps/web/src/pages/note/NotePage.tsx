@@ -13,6 +13,7 @@ import { AccountMenu } from '@/components/common/AccountMenu';
 import { EditableText } from '@/components/common/EditableText';
 import { Logo } from '@/components/common/Logo';
 import { PageGradient } from '@/components/common/PageGradient';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NotesPane } from '@/components/note/NotesPane';
 import { RecordingPill } from '@/components/note/RecordingPill';
 import { StatusChip } from '@/components/note/StatusChip';
@@ -153,14 +154,28 @@ function NoteView({ noteId }: { noteId: string }) {
           />
         )}
 
-        <TranscriptPane
-          segments={segments}
-          mode={mode}
-          // Fewer lines than chunks recorded here: some are still on the way.
-          transcribing={session !== null && segments.length < session.nextSeq}
-          className="mt-12"
-        />
-        <NotesPane canBuild={mode === 'ready'} className="mt-12" />
+        <Tabs defaultValue="transcript" className="mt-12">
+          <TabsList>
+            <TabsTrigger value="transcript">Transcript</TabsTrigger>
+            {/* Notes are built from the whole transcript, so not before. */}
+            <TabsTrigger value="notes" disabled={mode !== 'ready'}>
+              Notes
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="transcript" className="mt-8">
+            <TranscriptPane
+              segments={segments}
+              mode={mode}
+              // Fewer lines than chunks recorded here: some are still on the way.
+              transcribing={
+                session !== null && segments.length < session.nextSeq
+              }
+            />
+          </TabsContent>
+          <TabsContent value="notes" className="mt-8">
+            <NotesPane />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

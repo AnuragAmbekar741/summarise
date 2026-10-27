@@ -4,7 +4,9 @@ import { AccountMenu } from '@/components/common/AccountMenu';
 import { GradientOrb } from '@/components/common/GradientOrb';
 import { Logo } from '@/components/common/Logo';
 import { LiveNoteCard } from '@/components/note/LiveNoteCard';
+import { NoteList } from '@/components/note/NoteList';
 import { Button } from '@/components/ui/button';
+import { useNotes } from '@/hooks/note/useNotes';
 import { useStartNote } from '@/hooks/note/useStartNote';
 import { useRecorder } from '@/hooks/recorder/useRecorder';
 import { useUnfinishedSessions } from '@/hooks/recorder/useUnfinishedSessions';
@@ -14,6 +16,13 @@ export function HomePage() {
   const startNote = useStartNote();
   const recorder = useRecorder();
   const sessions = useUnfinishedSessions();
+  const notes = useNotes();
+
+  // A note still recording from this browser already has its live card.
+  const liveIds = new Set(sessions.map((session) => session.noteId));
+  const listed = (notes.data ?? []).filter(
+    (note) => !(liveIds.has(note.id) && note.status === 'recording'),
+  );
 
   return (
     <div className="relative min-h-svh overflow-hidden bg-canvas">
@@ -46,6 +55,22 @@ export function HomePage() {
             ))}
           </div>
         )}
+
+        {notes.isError && (
+          <p className="mt-12 text-body-md text-muted-foreground">
+            Couldn't load your notes.
+          </p>
+        )}
+        {notes.data &&
+          (listed.length > 0 ? (
+            <NoteList notes={listed} className="mt-12" />
+          ) : (
+            sessions.length === 0 && (
+              <p className="mt-12 text-body-md text-muted-foreground">
+                No notes yet. Start the notetaker in your next lecture.
+              </p>
+            )
+          ))}
       </main>
     </div>
   );

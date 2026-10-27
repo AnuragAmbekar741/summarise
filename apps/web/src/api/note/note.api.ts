@@ -1,6 +1,7 @@
 import type {
   CreateNoteInput,
   NoteResponse,
+  NotesResponse,
   StopNoteInput,
   TranscriptResponse,
   UploadChunkInput,
@@ -14,6 +15,10 @@ export type ChunkUpload = UploadChunkInput & { audio: Blob };
 
 export function createNote(input: CreateNoteInput = {}) {
   return postData<NoteResponse, CreateNoteInput>('/notes', input);
+}
+
+export function listNotes() {
+  return getData<NotesResponse>('/notes');
 }
 
 export function getNote(noteId: string) {

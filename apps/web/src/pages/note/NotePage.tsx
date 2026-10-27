@@ -1,8 +1,4 @@
-import {
-  NOTE_DESCRIPTION_MAX,
-  NOTE_TITLE_MAX,
-  type NoteStatus,
-} from '@summarise/contract';
+import { NOTE_TITLE_MAX, type NoteStatus } from '@summarise/contract';
 import { ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
@@ -28,6 +24,10 @@ import type { RecorderState } from '@/lib/recording/chunk.recorder';
 import { recorderErrorMessage } from '@/lib/recording/recorder.utils';
 import type { LocalSession } from '@/lib/recording/recording.store';
 import { formatDuration, formatNoteDate } from '@/lib/time.utils';
+
+// Kept to one short line in the header. Only the web app holds it to this;
+// the service allows up to NOTE_DESCRIPTION_MAX.
+const DESCRIPTION_MAX = 75;
 
 // Spec: docs/design/pages/note.md
 // Keyed by the note, so each note gets fresh page state (e.g. stopClicked
@@ -107,7 +107,7 @@ function NoteView({ noteId }: { noteId: string }) {
               value={description ?? ''}
               placeholder="Add a description"
               multiline
-              maxLength={NOTE_DESCRIPTION_MAX}
+              maxLength={DESCRIPTION_MAX}
               onSave={(next) =>
                 updateNote.mutate({ description: next || null })
               }

@@ -98,10 +98,13 @@ export function EditableText({
     if (!element) return;
     const raw = element.innerText;
     const clean = (multiline ? raw : raw.replace(/\s+/g, ' ')).trim();
-    const next = clean.slice(0, maxLength).trim();
     setEditing(false);
     setSession((count) => count + 1);
-    if (cancelled.current || next === value) return;
+    // Checked before cutting to maxLength, so opening older text that is
+    // already longer and leaving it alone doesn't shorten it.
+    if (cancelled.current || clean === value) return;
+    const next = clean.slice(0, maxLength).trim();
+    if (next === value) return;
     if (required && next === '') return;
     onSave(next);
   }

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Shared with the web app, which stops typing at these lengths.
+// The most the service accepts. The web app can stop typing sooner.
 export const NOTE_TITLE_MAX = 200;
 export const NOTE_DESCRIPTION_MAX = 2000;
 

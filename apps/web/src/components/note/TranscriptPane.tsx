@@ -1,7 +1,7 @@
 import type { PublicTranscriptSegment } from '@summarise/contract';
 
 import { LoadingDots } from '@/components/common/LoadingDots';
-import { formatTimestamp } from '@/lib/time.utils';
+import { formatDuration, formatTimestamp } from '@/lib/time.utils';
 import { cn } from '@/lib/utils';
 
 // Spec: docs/design/components/transcript-pane.md
@@ -16,6 +16,8 @@ export type TranscriptMode =
 type TranscriptPaneProps = {
   segments: PublicTranscriptSegment[];
   mode: TranscriptMode;
+  // The recording's length, known once it has stopped.
+  durationMs: number | null;
   // Chunks recorded in this browser that haven't uploaded yet.
   pendingChunks: number;
   // Chunks recorded in this browser that aren't in the transcript yet.
@@ -26,6 +28,7 @@ type TranscriptPaneProps = {
 export function TranscriptPane({
   segments,
   mode,
+  durationMs,
   pendingChunks,
   transcribing,
   className,
@@ -40,7 +43,7 @@ export function TranscriptPane({
           Transcript
         </h2>
         <p className="text-caption text-muted-foreground">
-          {captionFor(mode, pendingChunks)}
+          {captionFor({ mode, pendingChunks, segments, durationMs })}
         </p>
       </div>
 
@@ -79,12 +82,38 @@ export function TranscriptPane({
   );
 }
 
-function captionFor(mode: TranscriptMode, pendingChunks: number) {
+function captionFor({
+  mode,
+  pendingChunks,
+  segments,
+  durationMs,
+}: {
+  mode: TranscriptMode;
+  pendingChunks: number;
+  segments: PublicTranscriptSegment[];
+  durationMs: number | null;
+}) {
   if (pendingChunks > 0) {
     return `${pendingChunks} ${pendingChunks === 1 ? 'part' : 'parts'} uploading`;
   }
   if (mode === 'elsewhere') return 'Recording on another device';
+  if (mode === 'ready' && segments.length > 0) {
+    const words = countWords(segments);
+    const length = `${words.toLocaleString('en-US')} ${words === 1 ? 'word' : 'words'}`;
+    // "48 min · 6,210 words"
+    return durationMs === null
+      ? length
+      : `${formatDuration(durationMs)} · ${length}`;
+  }
   return null;
+}
+
+function countWords(segments: PublicTranscriptSegment[]) {
+  return segments.reduce(
+    (total, segment) =>
+      total + segment.text.split(/\s+/).filter(Boolean).length,
+    0,
+  );
 }
 
 function Line({

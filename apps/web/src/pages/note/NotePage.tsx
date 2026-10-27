@@ -137,6 +137,7 @@ function NoteView({ noteId }: { noteId: string }) {
         <TranscriptPane
           segments={segments}
           mode={mode}
+          durationMs={durationMs}
           pendingChunks={pendingChunks}
           // Fewer lines than chunks recorded here: some are still on the way.
           transcribing={session !== null && segments.length < session.nextSeq}

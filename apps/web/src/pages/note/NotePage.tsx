@@ -5,6 +5,7 @@ import { Link, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { getApiError } from '@/api/error.utils';
+import { EditableText } from '@/components/common/EditableText';
 import { NotesPane } from '@/components/note/NotesPane';
 import { RecordingPill } from '@/components/note/RecordingPill';
 import {
@@ -13,6 +14,7 @@ import {
 } from '@/components/note/TranscriptPane';
 import { useNote } from '@/hooks/note/useNote';
 import { useTranscript } from '@/hooks/note/useTranscript';
+import { useUpdateNote } from '@/hooks/note/useUpdateNote';
 import { useElapsedMs } from '@/hooks/recorder/useElapsedMs';
 import { useLocalSession } from '@/hooks/recorder/useLocalSession';
 import { usePendingChunks } from '@/hooks/recorder/usePendingChunks';
@@ -33,6 +35,7 @@ export function NotePage() {
 function NoteView({ noteId }: { noteId: string }) {
   const note = useNote(noteId);
   const transcript = useTranscript(noteId);
+  const updateNote = useUpdateNote(noteId);
   const session = useLocalSession(noteId);
   const pendingChunks = usePendingChunks(noteId);
   const recorder = useRecorder();
@@ -67,7 +70,7 @@ function NoteView({ noteId }: { noteId: string }) {
   }
 
   const segments = transcript.data?.segments ?? [];
-  const { title, startedAt, durationMs } = note.data;
+  const { title, description, startedAt, durationMs } = note.data;
   const subtitle =
     mode === 'ready' && durationMs !== null
       ? `${formatNoteDate(startedAt)} · ${formatDuration(durationMs)}`
@@ -75,8 +78,8 @@ function NoteView({ noteId }: { noteId: string }) {
 
   return (
     <div className="flex min-h-svh flex-col bg-canvas lg:h-svh">
-      <header className="flex flex-wrap items-center justify-between gap-4 px-4 py-5 sm:px-8">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+      <header className="flex flex-wrap items-start justify-between gap-4 px-4 py-5 sm:px-8">
+        <div className="flex min-w-0 flex-1 items-start gap-2 sm:gap-4">
           <Link
             to="/"
             aria-label="Back to notes"
@@ -84,10 +87,26 @@ function NoteView({ noteId }: { noteId: string }) {
           >
             <ChevronLeft className="size-5" />
           </Link>
-          <div className="min-w-0">
-            <h1 className="truncate text-display-sm sm:text-display-md">
-              {title}
-            </h1>
+          <div className="min-w-0 flex-1">
+            <EditableText
+              as="h1"
+              label="Title"
+              value={title}
+              required
+              showPencil
+              onSave={(next) => updateNote.mutate({ title: next })}
+              className="text-display-sm sm:text-display-md"
+            />
+            <EditableText
+              label="Description"
+              value={description ?? ''}
+              placeholder="Add a description"
+              multiline
+              onSave={(next) =>
+                updateNote.mutate({ description: next || null })
+              }
+              className="mt-2 max-w-[640px] text-body-md text-body"
+            />
             <p className="mt-1 text-caption text-muted-foreground">
               {subtitle}
             </p>

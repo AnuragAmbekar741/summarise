@@ -55,6 +55,11 @@ export function createNoteService({
       return toPublicNote(await notes.update(note.id, input));
     },
 
+    async delete(userId: string, noteId: string): Promise<void> {
+      const note = await getOwnedNote(userId, noteId);
+      await notes.delete(note.id);
+    },
+
     // Recording ends. Chunks still in flight (seq < totalChunks) are accepted
     // until all have arrived; then the note is ready.
     async stop(

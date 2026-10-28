@@ -13,6 +13,9 @@ export type RecorderContextValue = {
   // Also carries on a note whose recording was cut off by a reload.
   resume: (noteId: string) => Promise<void>;
   stop: (noteId: string) => Promise<void>;
+  // Turns the mic off and drops what this browser still holds for the note,
+  // without sending it. Used before the note is deleted.
+  discard: (noteId: string) => Promise<void>;
 };
 
 export const RecorderContext = createContext<RecorderContextValue | null>(null);

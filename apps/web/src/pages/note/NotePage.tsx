@@ -5,7 +5,7 @@ import {
 } from '@summarise/contract';
 import { ChevronLeft } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { getApiError } from '@/api/error.utils';
@@ -15,6 +15,8 @@ import { FloatingWidget } from '@/components/common/FloatingWidget';
 import { Logo } from '@/components/common/Logo';
 import { PageGradient } from '@/components/common/PageGradient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { DeleteNoteDialog } from '@/components/note/DeleteNoteDialog';
+import { NoteActionsMenu } from '@/components/note/NoteActionsMenu';
 import { NotesPane } from '@/components/note/NotesPane';
 import { RecordingPill } from '@/components/note/RecordingPill';
 import { StatusChip } from '@/components/note/StatusChip';
@@ -56,6 +58,8 @@ function NoteView({ noteId }: { noteId: string }) {
   const elapsedMs = useElapsedMs();
   // Between clicking Stop and the service hearing about it.
   const [stopClicked, setStopClicked] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
 
   if (note.isError) {
     return getApiError(note.error)?.code === 'NOT_FOUND' ? (
@@ -122,7 +126,7 @@ function NoteView({ noteId }: { noteId: string }) {
           required
           maxLength={NOTE_TITLE_MAX}
           onSave={(next) => updateNote.mutate({ title: next })}
-          className="mt-4 text-display-md sm:text-display-mega"
+          className="mt-4 text-display-sm sm:text-display-lg"
         />
         <EditableText
           label="Description"
@@ -141,13 +145,16 @@ function NoteView({ noteId }: { noteId: string }) {
         </div>
 
         <Tabs defaultValue="transcript" className="mt-12">
-          <TabsList>
-            <TabsTrigger value="transcript">Transcript</TabsTrigger>
-            {/* Notes are built from the whole transcript, so not before. */}
-            <TabsTrigger value="notes" disabled={mode !== 'ready'}>
-              Notes
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between gap-4">
+            <TabsList>
+              <TabsTrigger value="transcript">Transcript</TabsTrigger>
+              {/* Notes are built from the whole transcript, so not before. */}
+              <TabsTrigger value="notes" disabled={mode !== 'ready'}>
+                Notes
+              </TabsTrigger>
+            </TabsList>
+            <NoteActionsMenu onDelete={() => setDeleting(true)} />
+          </div>
           <TabsContent value="transcript" className="mt-8">
             <TranscriptPane
               segments={segments}
@@ -163,6 +170,15 @@ function NoteView({ noteId }: { noteId: string }) {
           </TabsContent>
         </Tabs>
       </main>
+
+      <DeleteNoteDialog
+        noteId={noteId}
+        title={title}
+        recording={mode === 'recording' || mode === 'paused'}
+        open={deleting}
+        onOpenChange={setDeleting}
+        onDeleted={() => navigate('/', { replace: true })}
+      />
 
       {(mode === 'recording' || mode === 'paused' || mode === 'finishing') && (
         <FloatingWidget label="Recording controls">

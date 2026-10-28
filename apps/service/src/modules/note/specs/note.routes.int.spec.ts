@@ -224,6 +224,43 @@ describe('note routes', async () => {
     });
   });
 
+  describe('DELETE /notes/:noteId', () => {
+    it('deletes the note and its transcript', async () => {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes').send({});
+      await uploadChunk(agent, body.note.id, 0).expect(200);
+
+      const response = await agent.delete(`/notes/${body.note.id}`);
+
+      expect(response.status).toBe(204);
+      expect((await agent.get(`/notes/${body.note.id}`)).status).toBe(404);
+      const { rows } = await db.$client.query(
+        'select 1 from transcript_segments where note_id = $1',
+        [body.note.id],
+      );
+      expect(rows).toHaveLength(0);
+    });
+
+    it("returns 404 for another user's note and keeps it", async () => {
+      const owner = await signUpAgent(app, emails);
+      const other = await signUpAgent(app, emails);
+      const { body } = await owner.post('/notes').send({});
+
+      const response = await other.delete(`/notes/${body.note.id}`);
+
+      expect(response.status).toBe(404);
+      expect((await owner.get(`/notes/${body.note.id}`)).status).toBe(200);
+    });
+
+    it('needs a signed-in user', async () => {
+      const response = await request(app).delete(
+        `/notes/${crypto.randomUUID()}`,
+      );
+
+      expect(response.status).toBe(401);
+    });
+  });
+
   describe('POST /notes/:noteId/stop', () => {
     it('moves to processing while chunks are still missing', async () => {
       const agent = await signUpAgent(app, emails);

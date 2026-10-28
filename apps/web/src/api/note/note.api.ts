@@ -9,7 +9,7 @@ import type {
   UploadChunkResponse,
 } from '@summarise/contract';
 
-import { getData, patchData, postData } from '../requests';
+import { deleteData, getData, patchData, postData } from '../requests';
 
 // One recorded chunk: its audio plus the fields the service validates.
 export type ChunkUpload = UploadChunkInput & { audio: Blob };
@@ -28,6 +28,10 @@ export function getNote(noteId: string) {
 
 export function updateNote(noteId: string, input: UpdateNoteInput) {
   return patchData<NoteResponse, UpdateNoteInput>(`/notes/${noteId}`, input);
+}
+
+export function deleteNote(noteId: string) {
+  return deleteData<void>(`/notes/${noteId}`);
 }
 
 export function stopNote(noteId: string, input: StopNoteInput) {

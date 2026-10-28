@@ -34,6 +34,12 @@ export function noteRoutes(
       validateBody(UpdateNoteSchema),
       controller.update,
     )
+    .delete(
+      '/:noteId',
+      requireAuth,
+      validateParams(NoteParamsSchema),
+      controller.delete,
+    )
     .post(
       '/:noteId/stop',
       requireAuth,

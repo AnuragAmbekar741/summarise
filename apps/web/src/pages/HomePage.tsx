@@ -33,9 +33,9 @@ export function HomePage() {
         <AccountMenu />
       </header>
 
-      <main className="relative z-10 mx-auto max-w-[1064px] px-4 pt-12 pb-section sm:px-12 sm:pt-14">
+      <main className="relative z-10 mx-auto max-w-[1064px] px-4 pt-6 pb-section sm:px-12 sm:pt-8">
         <div className="flex flex-wrap items-center justify-between gap-6">
-          <h1 className="text-display-xl sm:text-display-mega">Notes</h1>
+          <h1 className="text-display-sm sm:text-display-lg">Notes</h1>
           <Button
             size="lg"
             // One recording at a time per tab.
@@ -48,7 +48,7 @@ export function HomePage() {
         </div>
 
         {sessions.length > 0 && (
-          <div className="mt-12 space-y-4">
+          <div className="mt-8 space-y-4">
             {sessions.map((session) => (
               <LiveNoteCard key={session.noteId} session={session} />
             ))}
@@ -56,16 +56,16 @@ export function HomePage() {
         )}
 
         {notes.isError && (
-          <p className="mt-12 text-body-md text-muted-foreground">
+          <p className="mt-8 text-body-md text-muted-foreground">
             Couldn't load your notes.
           </p>
         )}
         {notes.data &&
           (listed.length > 0 ? (
-            <NoteList notes={listed} className="mt-12" />
+            <NoteList notes={listed} className="mt-8" />
           ) : (
             sessions.length === 0 && (
-              <p className="mt-12 text-body-md text-muted-foreground">
+              <p className="mt-8 text-body-md text-muted-foreground">
                 No notes yet. Start the notetaker in your next lecture.
               </p>
             )

@@ -17,13 +17,13 @@ type NoteListProps = {
 
 export function NoteList({ notes, className }: NoteListProps) {
   return (
-    <div className={cn('space-y-12', className)}>
+    <div className={cn('space-y-8', className)}>
       {groupByDay(notes).map(({ day, notes: dayNotes }) => (
         <section key={day}>
           <h2 className="font-sans text-caption-upper text-muted-foreground uppercase">
             {day}
           </h2>
-          <ul className="mt-4 space-y-2">
+          <ul className="mt-3 space-y-1">
             {dayNotes.map((note) => (
               <li key={note.id}>
                 <NoteRow note={note} />
@@ -52,7 +52,7 @@ function NoteRow({ note }: { note: PublicNote }) {
         className="group flex items-baseline justify-between gap-6 py-2 pr-12"
       >
         <div className="min-w-0">
-          <p className="truncate font-display text-display-sm text-ink decoration-1 underline-offset-4 group-hover:underline">
+          <p className="truncate font-display text-title-md font-light text-ink decoration-1 underline-offset-4 group-hover:underline">
             {note.title}
           </p>
           {note.status === 'processing' && (

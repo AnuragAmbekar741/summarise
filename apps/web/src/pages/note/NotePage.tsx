@@ -110,7 +110,7 @@ function NoteView({ noteId }: { noteId: string }) {
         <AccountMenu />
       </header>
 
-      <main className="relative z-10 mx-auto max-w-[1064px] px-4 pt-8 pb-section sm:px-12 sm:pt-12">
+      <main className="relative z-10 mx-auto max-w-[1064px] px-4 pt-4 pb-section sm:px-12 sm:pt-6">
         <Link
           to="/"
           className="inline-flex items-center gap-1 text-nav-link text-muted-foreground transition-colors hover:text-ink"

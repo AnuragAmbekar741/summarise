@@ -1,5 +1,8 @@
+import axios from 'axios';
 import type {
   CreateNoteInput,
+  CreateUploadInput,
+  CreateUploadResponse,
   NoteResponse,
   NotesResponse,
   StopNoteInput,
@@ -54,4 +57,32 @@ export function uploadChunk(noteId: string, chunk: ChunkUpload) {
 
 export function getTranscript(noteId: string) {
   return getData<TranscriptResponse>(`/notes/${noteId}/transcript`);
+}
+
+// Creates an upload note and returns the URL to PUT the file to.
+export function createUpload(input: CreateUploadInput) {
+  return postData<CreateUploadResponse, CreateUploadInput>(
+    '/notes/uploads',
+    input,
+  );
+}
+
+// Sends the file straight to the bucket, not to the service, so it uses
+// plain axios: no base URL and no auth cookies. The Content-Type must match
+// the one the URL was signed with.
+export async function putFile(
+  uploadUrl: string,
+  file: File,
+  onProgress: (fraction: number) => void,
+) {
+  await axios.put(uploadUrl, file, {
+    headers: { 'Content-Type': file.type },
+    onUploadProgress: (event) => {
+      if (event.total) onProgress(event.loaded / event.total);
+    },
+  });
+}
+
+export function completeUpload(noteId: string) {
+  return postData<NoteResponse>(`/notes/${noteId}/upload/complete`);
 }

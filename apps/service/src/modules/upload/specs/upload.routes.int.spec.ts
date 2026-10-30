@@ -1,5 +1,6 @@
 import { rm } from 'node:fs/promises';
 
+import { uploadKey } from '@summarise/blob';
 import { config } from '@summarise/config';
 import { UPLOAD_MAX_BYTES } from '@summarise/contract';
 import { createRedisClient } from '@summarise/queue';
@@ -13,7 +14,6 @@ import {
   createTempBlobStore,
   signUpAgent,
 } from '../../../specs/test.utils';
-import { uploadKey } from '../utils/upload.utils';
 
 // Runs against the real Postgres and Redis from docker compose. Every test
 // signs up its own user; all of them are deleted at the end.
@@ -180,6 +180,18 @@ describe('upload routes', async () => {
       );
 
       expect(response.status).toBe(401);
+    });
+  });
+
+  describe('DELETE /notes/:noteId', () => {
+    it('deletes the uploaded file with the note', async () => {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes/uploads').send(lecture);
+      await blob.put(uploadKey(body.note.id), Buffer.alloc(lecture.size));
+
+      await agent.delete(`/notes/${body.note.id}`).expect(204);
+
+      expect(await blob.head(uploadKey(body.note.id))).toBeUndefined();
     });
   });
 });

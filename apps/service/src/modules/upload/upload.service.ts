@@ -1,4 +1,4 @@
-import type { ObjectStore } from '@summarise/blob';
+import { uploadKey, type ObjectStore } from '@summarise/blob';
 import type {
   CreateUploadInput,
   CreateUploadResponse,
@@ -8,7 +8,7 @@ import type { NoteRepository } from '@summarise/storage';
 
 import { HttpError } from '../../common/error.utils';
 import { toPublicNote, type NoteService } from '../note/note.service';
-import { titleFromFileName, uploadKey } from './utils/upload.utils';
+import { titleFromFileName } from './utils/upload.utils';
 
 // How long the browser has to start the upload.
 const UPLOAD_URL_SECONDS = 15 * 60;

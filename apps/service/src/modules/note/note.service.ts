@@ -4,6 +4,7 @@ import type {
   StopNoteInput,
   UpdateNoteInput,
 } from '@summarise/contract';
+import { uploadKey, type BlobStore } from '@summarise/blob';
 import type { Note, NoteRepository } from '@summarise/storage';
 
 import { HttpError } from '../../common/error.utils';
@@ -12,11 +13,13 @@ import type { TranscriptService } from '../transcript/transcript.service';
 type NoteServiceDeps = {
   notes: NoteRepository;
   transcriptService: TranscriptService;
+  blob: BlobStore;
 };
 
 export function createNoteService({
   notes,
   transcriptService,
+  blob,
 }: NoteServiceDeps) {
   // Another user's note reads as missing, so ids can't be probed.
   async function getOwnedNote(userId: string, noteId: string): Promise<Note> {
@@ -57,6 +60,8 @@ export function createNoteService({
 
     async delete(userId: string, noteId: string): Promise<void> {
       const note = await getOwnedNote(userId, noteId);
+      // File first: if that fails the note is still there to delete again.
+      if (note.source === 'upload') await blob.delete(uploadKey(note.id));
       await notes.delete(note.id);
     },
 

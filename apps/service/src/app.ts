@@ -45,7 +45,11 @@ export function createApp({ db, redis, config, blob, speechToText }: AppDeps) {
   const notes = createNoteRepository(db);
   const segments = createTranscriptSegmentRepository(db);
   const transcriptService = createTranscriptService({ notes, segments });
-  const noteService = createNoteService({ notes, transcriptService });
+  const noteService = createNoteService({
+    notes,
+    transcriptService,
+    blob,
+  });
   const recordingService = createRecordingService({
     noteService,
     transcriptService,

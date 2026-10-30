@@ -16,10 +16,5 @@ if (!result.success) {
   throw new Error(`Invalid environment:\n${z.prettifyError(result.error)}`);
 }
 
-export const config = {
-  ...result.data,
-  // Each app runs from its own folder, so a relative DATA_DIR is anchored to
-  // the repo root to make every app share one folder.
-  DATA_DIR: resolve(REPO_ROOT, result.data.DATA_DIR),
-};
+export const config = result.data;
 export type { Config } from './config.schema';

@@ -13,9 +13,6 @@ export const ConfigSchema = z.object({
   // `openssl rand -base64 32`, using a different value for each.
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
-  // Root folder for saved recordings. Relative paths are resolved from the
-  // repo root.
-  DATA_DIR: z.string().min(1).default('.data'),
   // Neon Object Storage (S3-compatible). `neon deploy` / `neon env pull`
   // writes the AWS_* keys for the linked branch.
   AWS_ENDPOINT_URL_S3: z.url(),

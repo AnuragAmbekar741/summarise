@@ -9,7 +9,7 @@ import request from 'supertest';
 
 // Shared helpers for the service's integration tests.
 
-// A blob store in a fresh temp folder, so tests never touch DATA_DIR.
+// A blob store in a fresh temp folder, so tests never touch the bucket.
 export function createTempBlobStore() {
   const dir = mkdtempSync(join(tmpdir(), 'summarise-blob-'));
   return { dir, blob: createLocalBlobStore(dir) };

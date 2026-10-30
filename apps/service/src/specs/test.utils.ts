@@ -2,17 +2,43 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { createLocalBlobStore } from '@summarise/blob';
+import {
+  BlobNotFoundError,
+  createLocalBlobStore,
+  type ObjectStore,
+} from '@summarise/blob';
 import type { SpeechToText, TranscribeInput } from '@summarise/speech-to-text';
 import type { Express } from 'express';
 import request from 'supertest';
 
 // Shared helpers for the service's integration tests.
 
-// A blob store in a fresh temp folder, so tests never touch the bucket.
+// A blob store in a fresh temp folder, so tests never touch the bucket. Its
+// presigned URLs lead nowhere: a test "uploads" a file by calling put().
 export function createTempBlobStore() {
   const dir = mkdtempSync(join(tmpdir(), 'summarise-blob-'));
-  return { dir, blob: createLocalBlobStore(dir) };
+  const local = createLocalBlobStore(dir);
+  const blob: ObjectStore = {
+    ...local,
+    async head(key) {
+      try {
+        return { size: (await local.get(key)).length };
+      } catch (error) {
+        if (error instanceof BlobNotFoundError) return undefined;
+        throw error;
+      }
+    },
+    async list() {
+      throw new Error('list() is not used by the service');
+    },
+    async presignPut(key) {
+      return `https://bucket.test/${key}?signed=put`;
+    },
+    async presignGet(key) {
+      return `https://bucket.test/${key}?signed=get`;
+    },
+  };
+  return { dir, blob };
 }
 
 // Stands in for Groq: returns `transcript(input)`, records every call, and

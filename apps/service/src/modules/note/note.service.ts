@@ -92,7 +92,7 @@ export function createNoteService({
 
 export type NoteService = ReturnType<typeof createNoteService>;
 
-function toPublicNote(note: Note): PublicNote {
+export function toPublicNote(note: Note): PublicNote {
   return {
     id: note.id,
     title: note.title,

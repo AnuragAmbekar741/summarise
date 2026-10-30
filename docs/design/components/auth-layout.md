@@ -1,7 +1,8 @@
 # Auth layout
 
 The shared frame for the login and signup pages: top nav, a big editorial
-headline on the left, the auth card on the right, with gradient orbs behind.
+headline on the left, the auth card on the right, with the
+[`PageGradient`](page-gradient.md) behind.
 
 **Source:** `apps/web/src/components/auth-layout/AuthLayout.tsx`
 
@@ -16,18 +17,17 @@ headline on the left, the auth card on the right, with gradient orbs behind.
 │   description (body-md)                │  (children)  │   │
 │                                        └──────────────┘   │
 └───────────────────────────────────────────────────────────┘
-          orbs sit behind everything, partly off-screen
+          sky wash behind everything, from the top right
 ```
 
 ## Props
 
-| Prop          | Type        | What it is                                      |
-| ------------- | ----------- | ----------------------------------------------- |
-| `navAction`   | `ReactNode` | Outline pill at the top right                   |
-| `headline`    | `ReactNode` | Hero h1; use `<br />` for the line break        |
-| `description` | `string`    | One or two sentences under the headline         |
-| `orbs`        | `ReactNode` | `GradientOrb` elements; each page picks its own |
-| `children`    | `ReactNode` | Card content                                    |
+| Prop          | Type        | What it is                               |
+| ------------- | ----------- | ---------------------------------------- |
+| `navAction`   | `ReactNode` | Outline pill at the top right            |
+| `headline`    | `ReactNode` | Hero h1; use `<br />` for the line break |
+| `description` | `string`    | One or two sentences under the headline  |
+| `children`    | `ReactNode` | Card content                             |
 
 ## Sizes & spacing
 
@@ -50,12 +50,10 @@ headline on the left, the auth card on the right, with gradient orbs behind.
 
 - Below 1024px the columns stack: headline first, card below, both centred and
   never wider than the screen.
-- Orbs keep their positions (percentages), so they shrink into view on small
-  screens.
 
 ## States
 
-- **Dark mode:** canvas `#0c0a09`, card `#1c1917`, orbs dimmed to 35%.
+- **Dark mode:** canvas `#0c0a09`, card `#1c1917`, sky wash dimmed to 45%.
 
 ## Usage
 
@@ -74,7 +72,6 @@ headline on the left, the auth card on the right, with gradient orbs behind.
     </>
   }
   description="Hit record in class…"
-  orbs={<GradientOrb color="peach" className="…" />}
 >
   …card content…
 </AuthLayout>

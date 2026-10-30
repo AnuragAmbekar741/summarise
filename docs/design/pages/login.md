@@ -43,12 +43,7 @@ bottom:
 
 ## Atmosphere
 
-| Orb        | Position (centre) | Size  |
-| ---------- | ----------------- | ----- |
-| `peach`    | 14% left, 8% top  | 720px |
-| `lavender` | 86% left, 30% top | 720px |
-| `mint`     | 54% left, 96% top | 640px |
-| `sky`      | 68% left, 92% top | 520px |
+[`PageGradient`](../components/page-gradient.md), via `AuthLayout`.
 
 ## Copy
 

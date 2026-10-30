@@ -35,8 +35,8 @@ reopened, and every earlier note is listed.
 
 ## Atmosphere
 
-[`PageGradient`](../components/page-gradient.md) at the top right: sky and
-peach in dark mode, a lighter sky alone in light mode.
+[`PageGradient`](../components/page-gradient.md): the sky wash from the top
+right, dimmed in dark mode.
 
 ## Copy
 

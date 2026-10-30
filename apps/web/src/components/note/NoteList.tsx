@@ -44,8 +44,8 @@ function NoteRow({ note }: { note: PublicNote }) {
       : `${formatTime(note.startedAt)} · ${formatDuration(note.durationMs)}`;
 
   return (
-    // The menu sits over the meta and shows on hover or focus, so it isn't
-    // inside the link.
+    // The menu sits in the link's right padding, beside the meta, and shows on
+    // hover or focus. It isn't inside the link.
     <div className="group/row relative">
       <Link
         to={`/notes/${note.id}`}
@@ -65,7 +65,7 @@ function NoteRow({ note }: { note: PublicNote }) {
             <p className="mt-2 text-caption text-muted-foreground">Recording</p>
           )}
         </div>
-        <span className="shrink-0 text-caption text-muted-foreground transition-opacity group-focus-within/row:opacity-0 group-hover/row:opacity-0 pointer-coarse:opacity-0">
+        <span className="shrink-0 text-caption text-muted-foreground">
           {meta}
         </span>
       </Link>

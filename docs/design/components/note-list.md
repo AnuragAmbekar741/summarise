@@ -24,7 +24,9 @@ note.
 
 ## States
 
-- **Hover:** the title underlines.
+- **Hover or focus:** the title underlines and the ⋯ actions menu appears at
+  the far right. The time stays visible beside it. On touch screens the menu
+  is always shown.
 - **Dark mode:** follows the tokens.
 
 ## Usage

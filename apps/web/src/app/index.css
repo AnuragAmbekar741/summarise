@@ -27,6 +27,7 @@
   --error: #dc2626;
   --success: #16a34a;
   --orb-opacity: 1;
+  --wash-opacity: 1;
 
   /* shadcn/ui variables, mapped onto the tokens above */
   --background: var(--canvas);
@@ -68,6 +69,7 @@
   --error: #ef4444;
   --success: #22c55e;
   --orb-opacity: 0.35;
+  --wash-opacity: 0.45;
 }
 
 @theme inline {
@@ -224,6 +226,27 @@
   background-size: 200% 100%;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* A soft sky glow from the top right corner. The stops follow a smoothstep
+   curve so the fade has no visible edge. */
+@utility bg-sky-wash {
+  background-image: radial-gradient(
+    1300px 850px at 100% 0%,
+    color-mix(in srgb, var(--color-orb-sky) 45%, transparent) 0%,
+    color-mix(in srgb, var(--color-orb-sky) 44.1%, transparent) 8.3%,
+    color-mix(in srgb, var(--color-orb-sky) 41.7%, transparent) 16.7%,
+    color-mix(in srgb, var(--color-orb-sky) 38%, transparent) 25%,
+    color-mix(in srgb, var(--color-orb-sky) 33.3%, transparent) 33.3%,
+    color-mix(in srgb, var(--color-orb-sky) 28.1%, transparent) 41.7%,
+    color-mix(in srgb, var(--color-orb-sky) 22.5%, transparent) 50%,
+    color-mix(in srgb, var(--color-orb-sky) 16.9%, transparent) 58.3%,
+    color-mix(in srgb, var(--color-orb-sky) 11.7%, transparent) 66.7%,
+    color-mix(in srgb, var(--color-orb-sky) 7%, transparent) 75%,
+    color-mix(in srgb, var(--color-orb-sky) 3.3%, transparent) 83.3%,
+    color-mix(in srgb, var(--color-orb-sky) 0.9%, transparent) 91.7%,
+    transparent 100%
+  );
 }
 
 @layer base {

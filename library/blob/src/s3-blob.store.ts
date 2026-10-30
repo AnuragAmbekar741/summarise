@@ -36,6 +36,10 @@ export function createS3BlobStore({
     credentials: { accessKeyId, secretAccessKey },
     // Neon only supports path-style URLs (endpoint/bucket/key).
     forcePathStyle: true,
+    // By default the SDK signs a checksum into presigned PUT URLs, computed
+    // before the file exists (so of an empty body). Only add one when the
+    // operation requires it.
+    requestChecksumCalculation: 'WHEN_REQUIRED',
   });
 
   return {

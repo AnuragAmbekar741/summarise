@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { and, desc, eq, lt, sql } from 'drizzle-orm';
 
 import type { Database } from '../database';
 import { transcriptSegments } from '../transcript-segment/transcript-segment.table';
@@ -60,6 +60,22 @@ export function createNoteRepository(db: Database) {
         .where(and(eq(notes.id, id), eq(notes.status, 'uploading')))
         .returning();
       return note;
+    },
+
+    // Uploads that never finished: still uploading and created before
+    // `before`. Deletes them and returns their ids.
+    async deleteStaleUploads(before: Date): Promise<string[]> {
+      const deleted = await db
+        .delete(notes)
+        .where(
+          and(
+            eq(notes.source, 'upload'),
+            eq(notes.status, 'uploading'),
+            lt(notes.createdAt, before),
+          ),
+        )
+        .returning({ id: notes.id });
+      return deleted.map((note) => note.id);
     },
 
     // processing → ready once every expected segment exists. One statement,

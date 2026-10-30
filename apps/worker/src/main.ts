@@ -6,7 +6,7 @@ import { createDatabase, createNoteRepository } from '@summarise/storage';
 
 import { createUploadSweeper } from './upload/upload.sweeper';
 
-const SWEEP_EVERY_MS = 60 * 60 * 1000;
+const SWEEP_EVERY_MS = 4 * 60 * 60 * 1000;
 
 // The open Redis connection keeps the process running. Jobs get consumed here later.
 const redis = await createRedisClient(config.REDIS_URL);
@@ -20,7 +20,7 @@ const blob = createS3BlobStore({
 });
 logger.info({ redis: await redis.ping() }, 'worker started');
 
-// Once at start, then hourly. A failed sweep is retried on the next one.
+// Once at start, then every 4 hours. A failed sweep is retried on the next one.
 const sweeper = createUploadSweeper({ notes: createNoteRepository(db), blob });
 async function sweep() {
   try {

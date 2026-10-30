@@ -53,8 +53,10 @@ export function UploadsProvider({ children }: { children: ReactNode }) {
       // A note whose file never arrived is no use; drop it.
       if (noteId) await deleteNote(noteId).catch(() => undefined);
     } finally {
+      // Refetch first: dropping the progress while the list still says
+      // uploading would flash "Upload interrupted".
+      await refreshNotes();
       if (noteId) setNoteProgress(noteId, null);
-      void refreshNotes();
     }
   }
 

@@ -1,4 +1,4 @@
-import { createLocalBlobStore } from '@summarise/blob';
+import { createS3BlobStore } from '@summarise/blob';
 import { config } from '@summarise/config';
 import { logger } from '@summarise/logger';
 import { createRedisClient } from '@summarise/queue';
@@ -14,7 +14,13 @@ const app = createApp({
   db,
   redis,
   config,
-  blob: createLocalBlobStore(config.DATA_DIR),
+  blob: createS3BlobStore({
+    endpoint: config.AWS_ENDPOINT_URL_S3,
+    region: config.AWS_REGION,
+    accessKeyId: config.AWS_ACCESS_KEY_ID,
+    secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
+    bucket: config.UPLOADS_BUCKET,
+  }),
   speechToText: createGroqSpeechToText({ apiKey: config.GROQ_API_KEY }),
 });
 

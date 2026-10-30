@@ -4,10 +4,16 @@ import { z } from 'zod';
 export const NOTE_TITLE_MAX = 200;
 export const NOTE_DESCRIPTION_MAX = 2000;
 
-export const NoteSourceSchema = z.enum(['recording', 'text']);
+export const NoteSourceSchema = z.enum(['recording', 'text', 'upload']);
 
-// recording → processing (stopped, last chunks still arriving) → ready.
-export const NoteStatusSchema = z.enum(['recording', 'processing', 'ready']);
+// A recording: recording → processing (stopped, last chunks still arriving)
+// → ready. An upload: uploading → processing (being transcribed) → ready.
+export const NoteStatusSchema = z.enum([
+  'recording',
+  'processing',
+  'ready',
+  'uploading',
+]);
 
 export const NoteSchema = z.object({
   id: z.uuid(),

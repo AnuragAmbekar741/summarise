@@ -6,6 +6,9 @@ export type UploadsContextValue = {
   // Creates the note and uploads the file in the background. Failures show
   // as a toast.
   start: (file: File) => Promise<void>;
+  // Stops sending a note's file, quietly. Called before the note is deleted,
+  // so the file never lands in the bucket after the note is gone.
+  cancel: (noteId: string) => void;
 };
 
 export const UploadsContext = createContext<UploadsContextValue | null>(null);

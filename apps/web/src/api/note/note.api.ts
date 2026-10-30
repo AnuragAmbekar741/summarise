@@ -74,9 +74,11 @@ export async function putFile(
   uploadUrl: string,
   file: File,
   onProgress: (fraction: number) => void,
+  signal?: AbortSignal,
 ) {
   await axios.put(uploadUrl, file, {
     headers: { 'Content-Type': file.type },
+    signal,
     onUploadProgress: (event) => {
       if (event.total) onProgress(event.loaded / event.total);
     },

@@ -1,6 +1,6 @@
 import { CreateUploadSchema } from '@summarise/contract';
 import { FileAudio, Upload, X } from 'lucide-react';
-import { useId, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 
 import { FieldError } from '@/components/common/FieldError';
 import { Button } from '@/components/ui/button';
@@ -30,20 +30,49 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 
   function choose(next: File | undefined) {
     if (!next) return;
-    // The same checks the service runs, so a bad file is caught here.
-    const result = CreateUploadSchema.safeParse({
-      fileName: next.name,
-      contentType: next.type,
-      size: next.size,
-    });
-    if (result.success) {
-      setFile(next);
-      setError(undefined);
-    } else {
-      setFile(null);
-      setError(result.error.issues[0]?.message);
-    }
+    const problem = checkFile(next);
+    setFile(problem ? null : next);
+    setError(problem);
   }
+
+  // While open, a file dropped anywhere in the window is chosen, so a drop
+  // that misses the zone doesn't make the browser open the file and leave
+  // the app. Enter and leave fire for every element the drag crosses, so a
+  // counter tells when it has really left the window.
+  useEffect(() => {
+    if (!open) return;
+    let depth = 0;
+    const onEnter = (event: DragEvent) => {
+      event.preventDefault();
+      depth += 1;
+      setDragging(true);
+    };
+    const onLeave = () => {
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) setDragging(false);
+    };
+    const onOver = (event: DragEvent) => event.preventDefault();
+    const onDrop = (event: DragEvent) => {
+      event.preventDefault();
+      depth = 0;
+      setDragging(false);
+      const dropped = event.dataTransfer?.files[0];
+      if (!dropped) return;
+      const problem = checkFile(dropped);
+      setFile(problem ? null : dropped);
+      setError(problem);
+    };
+    window.addEventListener('dragenter', onEnter);
+    window.addEventListener('dragleave', onLeave);
+    window.addEventListener('dragover', onOver);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragenter', onEnter);
+      window.removeEventListener('dragleave', onLeave);
+      window.removeEventListener('dragover', onOver);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, [open]);
 
   function close(nextOpen: boolean) {
     if (!nextOpen) {
@@ -59,12 +88,6 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
     // Runs in the background; the notes list shows its progress.
     void uploads.start(file);
     close(false);
-  }
-
-  function onDrop(event: DragEvent) {
-    event.preventDefault();
-    setDragging(false);
-    choose(event.dataTransfer.files[0]);
   }
 
   return (
@@ -119,12 +142,6 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
               type="button"
               aria-describedby={error ? errorId : undefined}
               onClick={() => inputRef.current?.click()}
-              onDragOver={(event) => {
-                event.preventDefault();
-                setDragging(true);
-              }}
-              onDragLeave={() => setDragging(false)}
-              onDrop={onDrop}
               className={cn(
                 'flex w-full flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-9 text-center transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 dragging
@@ -163,6 +180,17 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
       </DialogContent>
     </Dialog>
   );
+}
+
+// The same checks the service runs, so a bad file is caught here. Returns
+// what's wrong with it, or undefined when it's fine.
+function checkFile(file: File) {
+  const result = CreateUploadSchema.safeParse({
+    fileName: file.name,
+    contentType: file.type,
+    size: file.size,
+  });
+  return result.success ? undefined : result.error.issues[0]?.message;
 }
 
 // 91234567 → "87 MB"

@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom';
 
 import { RecorderProvider } from '@/components/recorder/RecorderProvider';
+import { UploadsProvider } from '@/components/upload/UploadsProvider';
 import { useCurrentUser } from '@/hooks/user/useCurrentUser';
 
 // Wraps routes that need a signed-in user.
@@ -12,7 +13,9 @@ export function RequireAuth() {
   if (!user) return <Navigate to="/login" replace />;
   return (
     <RecorderProvider>
-      <Outlet />
+      <UploadsProvider>
+        <Outlet />
+      </UploadsProvider>
     </RecorderProvider>
   );
 }

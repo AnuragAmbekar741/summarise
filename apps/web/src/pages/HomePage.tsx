@@ -1,4 +1,5 @@
-import { CircleDot } from 'lucide-react';
+import { CircleDot, Upload } from 'lucide-react';
+import { useState } from 'react';
 
 import { AccountMenu } from '@/components/common/AccountMenu';
 import { Logo } from '@/components/common/Logo';
@@ -6,6 +7,7 @@ import { PageGradient } from '@/components/common/PageGradient';
 import { LiveNoteCard } from '@/components/note/LiveNoteCard';
 import { NoteList } from '@/components/note/NoteList';
 import { Button } from '@/components/ui/button';
+import { UploadDialog } from '@/components/upload/UploadDialog';
 import { useNotes } from '@/hooks/note/useNotes';
 import { useStartNote } from '@/hooks/note/useStartNote';
 import { useRecorder } from '@/hooks/recorder/useRecorder';
@@ -17,6 +19,7 @@ export function HomePage() {
   const recorder = useRecorder();
   const sessions = useUnfinishedSessions();
   const notes = useNotes();
+  const [uploading, setUploading] = useState(false);
 
   // A note still recording from this browser already has its live card.
   const liveIds = new Set(sessions.map((session) => session.noteId));
@@ -36,16 +39,27 @@ export function HomePage() {
       <main className="relative z-10 mx-auto max-w-[1064px] px-4 pt-6 pb-section sm:px-12 sm:pt-8">
         <div className="flex flex-wrap items-center justify-between gap-6">
           <h1 className="text-display-sm sm:text-display-lg">Notes</h1>
-          <Button
-            size="lg"
-            // One recording at a time per tab.
-            disabled={startNote.isPending || recorder.noteId !== null}
-            onClick={() => startNote.mutate()}
-          >
-            <CircleDot className="text-destructive" />
-            {startNote.isPending ? 'Starting…' : 'Start notetaker'}
-          </Button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setUploading(true)}
+            >
+              <Upload />
+              Upload recording
+            </Button>
+            <Button
+              size="lg"
+              // One recording at a time per tab.
+              disabled={startNote.isPending || recorder.noteId !== null}
+              onClick={() => startNote.mutate()}
+            >
+              <CircleDot className="text-destructive" />
+              {startNote.isPending ? 'Starting…' : 'Start notetaker'}
+            </Button>
+          </div>
         </div>
+        <UploadDialog open={uploading} onOpenChange={setUploading} />
 
         {sessions.length > 0 && (
           <div className="mt-8 space-y-4">

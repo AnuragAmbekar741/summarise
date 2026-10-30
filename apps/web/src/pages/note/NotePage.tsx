@@ -1,5 +1,6 @@
 import {
   NOTE_TITLE_MAX,
+  type NoteSource,
   type NoteStatus,
   type PublicTranscriptSegment,
 } from '@summarise/contract';
@@ -31,6 +32,7 @@ import { useElapsedMs } from '@/hooks/recorder/useElapsedMs';
 import { useLocalSession } from '@/hooks/recorder/useLocalSession';
 import { usePendingChunks } from '@/hooks/recorder/usePendingChunks';
 import { useRecorder } from '@/hooks/recorder/useRecorder';
+import { useUploads } from '@/hooks/upload/useUploads';
 import type { RecorderState } from '@/lib/recording/chunk.recorder';
 import { recorderErrorMessage } from '@/lib/recording/recorder.utils';
 import type { LocalSession } from '@/lib/recording/recording.store';
@@ -55,6 +57,7 @@ function NoteView({ noteId }: { noteId: string }) {
   const session = useLocalSession(noteId);
   const pendingChunks = usePendingChunks(noteId);
   const recorder = useRecorder();
+  const uploadProgress = useUploads().progress[noteId];
   const elapsedMs = useElapsedMs();
   // Between clicking Stop and the service hearing about it.
   const [stopClicked, setStopClicked] = useState(false);
@@ -73,7 +76,9 @@ function NoteView({ noteId }: { noteId: string }) {
 
   const isActive = recorder.noteId === noteId;
   const mode = modeFor({
+    source: note.data.source,
     status: note.data.status,
+    uploading: uploadProgress !== undefined,
     recorderState: isActive ? recorder.state : undefined,
     session,
     stopClicked,
@@ -163,6 +168,7 @@ function NoteView({ noteId }: { noteId: string }) {
               transcribing={
                 session !== null && segments.length < session.nextSeq
               }
+              uploadProgress={uploadProgress}
             />
           </TabsContent>
           <TabsContent value="notes" className="mt-8">
@@ -200,18 +206,28 @@ function NoteView({ noteId }: { noteId: string }) {
 
 // What the page shows, from the service's status and this browser's state.
 function modeFor({
+  source,
   status,
+  uploading,
   recorderState,
   session,
   stopClicked,
 }: {
+  source: NoteSource;
   status: NoteStatus;
+  // This tab is sending the note's file.
+  uploading: boolean;
   // This tab's recorder, when it is recording this note.
   recorderState: RecorderState | undefined;
   session: LocalSession | null;
   stopClicked: boolean;
 }): TranscriptMode {
   if (status === 'ready') return 'ready';
+  if (source === 'upload') {
+    if (status === 'processing') return 'transcribing';
+    // Only the tab sending the file knows it's still on its way.
+    return uploading ? 'uploading' : 'interrupted';
+  }
   if (status === 'processing') return 'finishing';
   if (recorderState === 'recording') return 'recording';
   if (recorderState === 'paused') return 'paused';

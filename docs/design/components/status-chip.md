@@ -6,13 +6,16 @@ Where a note stands, at the start of the line under the note's title.
 
 ## Variants
 
-| `mode`      | Dot                                | Label                 |
-| ----------- | ---------------------------------- | --------------------- |
-| `recording` | `{colors.semantic-error}`, pulsing | "RECORDING"           |
-| `paused`    | Ring of `{colors.muted}`           | "PAUSED"              |
-| `finishing` | `{colors.muted}`, pulsing          | "FINISHING"           |
-| `ready`     | `{colors.semantic-success}`        | "TRANSCRIPT READY"    |
-| `elsewhere` | `{colors.semantic-error}`          | "RECORDING ELSEWHERE" |
+| `mode`         | Dot                                | Label                 |
+| -------------- | ---------------------------------- | --------------------- |
+| `recording`    | `{colors.semantic-error}`, pulsing | "RECORDING"           |
+| `paused`       | Ring of `{colors.muted}`           | "PAUSED"              |
+| `finishing`    | `{colors.muted}`, pulsing          | "FINISHING"           |
+| `ready`        | `{colors.semantic-success}`        | "TRANSCRIPT READY"    |
+| `elsewhere`    | `{colors.semantic-error}`          | "RECORDING ELSEWHERE" |
+| `uploading`    | `{colors.muted}`, pulsing          | "UPLOADING"           |
+| `interrupted`  | Ring of `{colors.muted}`           | "UPLOAD INTERRUPTED"  |
+| `transcribing` | `{colors.muted}`, pulsing          | "TRANSCRIBING"        |
 
 ## Sizes
 

@@ -14,6 +14,18 @@ const STATUSES = {
   },
   ready: { label: 'Transcript ready', dot: 'bg-success' },
   elsewhere: { label: 'Recording elsewhere', dot: 'bg-destructive' },
+  uploading: {
+    label: 'Uploading',
+    dot: 'animate-pulse bg-muted-foreground motion-reduce:animate-none',
+  },
+  interrupted: {
+    label: 'Upload interrupted',
+    dot: 'border-2 border-muted-foreground',
+  },
+  transcribing: {
+    label: 'Transcribing',
+    dot: 'animate-pulse bg-muted-foreground motion-reduce:animate-none',
+  },
 } as const;
 
 // Where the note stands, at the start of the line under the title.

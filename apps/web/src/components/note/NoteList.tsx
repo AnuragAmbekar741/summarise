@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { LoadingDots } from '@/components/common/LoadingDots';
 import { DeleteNoteDialog } from '@/components/note/DeleteNoteDialog';
 import { NoteActionsMenu } from '@/components/note/NoteActionsMenu';
+import { useUploads } from '@/hooks/upload/useUploads';
 import { formatDay, formatDuration, formatTime } from '@/lib/time.utils';
 import { cn } from '@/lib/utils';
 
@@ -38,6 +39,9 @@ export function NoteList({ notes, className }: NoteListProps) {
 
 function NoteRow({ note }: { note: PublicNote }) {
   const [deleting, setDeleting] = useState(false);
+  // Only this tab knows how far an upload has got. An uploading note it
+  // isn't sending was cut off (the tab that sent it closed or reloaded).
+  const uploadProgress = useUploads().progress[note.id];
   const meta =
     note.durationMs === null
       ? formatTime(note.startedAt)
@@ -66,6 +70,14 @@ function NoteRow({ note }: { note: PublicNote }) {
           {note.status === 'recording' && (
             <p className="mt-2 text-caption text-muted-foreground">Recording</p>
           )}
+          {note.status === 'uploading' &&
+            (uploadProgress === undefined ? (
+              <p className="mt-2 text-caption text-muted-foreground">
+                Upload interrupted
+              </p>
+            ) : (
+              <UploadProgress fraction={uploadProgress} />
+            ))}
         </div>
         <span className="shrink-0 text-caption text-muted-foreground">
           {meta}
@@ -98,4 +110,28 @@ function groupByDay(notes: PublicNote[]) {
     else groups.push({ day, notes: [note] });
   }
   return groups;
+}
+
+function UploadProgress({ fraction }: { fraction: number }) {
+  const percent = Math.round(fraction * 100);
+  return (
+    <div className="mt-2 w-56 max-w-full">
+      <p className="text-caption text-muted-foreground">
+        Uploading · {percent}%
+      </p>
+      <div
+        role="progressbar"
+        aria-label="Upload progress"
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        className="mt-1.5 h-0.5 overflow-hidden rounded-full bg-hairline"
+      >
+        <div
+          className="h-full rounded-full bg-ink transition-[width] duration-300"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  );
 }

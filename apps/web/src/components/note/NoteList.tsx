@@ -44,9 +44,11 @@ function NoteRow({ note }: { note: PublicNote }) {
       : `${formatTime(note.startedAt)} · ${formatDuration(note.durationMs)}`;
 
   return (
+    // The row lifts to a card surface on hover, focus or while its menu is
+    // open; the negative margin keeps the text aligned with the day heading.
     // The menu sits in the link's right padding, beside the meta, and shows on
     // hover or focus. It isn't inside the link.
-    <div className="group/row relative">
+    <div className="group/row relative -mx-3 rounded-xl px-3 transition-colors duration-200 focus-within:bg-surface-card hover:bg-surface-card has-data-[state=open]:bg-surface-card">
       <Link
         to={`/notes/${note.id}`}
         className="group flex items-baseline justify-between gap-6 py-2 pr-12"
@@ -72,7 +74,7 @@ function NoteRow({ note }: { note: PublicNote }) {
       <NoteActionsMenu
         label={`Actions for ${note.title}`}
         onDelete={() => setDeleting(true)}
-        className="absolute top-1/2 right-0 -translate-y-1/2 opacity-0 transition-opacity group-focus-within/row:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100 pointer-coarse:opacity-100"
+        className="absolute top-1/2 right-1 -translate-y-1/2 opacity-0 transition-opacity group-focus-within/row:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100 pointer-coarse:opacity-100"
       />
       <DeleteNoteDialog
         noteId={note.id}

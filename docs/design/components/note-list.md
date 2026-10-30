@@ -24,9 +24,11 @@ note.
 
 ## States
 
-- **Hover or focus:** the title underlines and the ⋯ actions menu appears at
-  the far right. The time stays visible beside it. On touch screens the menu
-  is always shown.
+- **Hover or focus:** the row lifts to `{colors.surface-card}` with
+  `{rounded.xl}` (16px) corners and 12px side padding that bleeds past the
+  text, fading in over 200ms; it stays lifted while its menu is open. The title
+  underlines and the ⋯ actions menu appears at the far right. The time stays
+  visible beside it. On touch screens the menu is always shown.
 - **Dark mode:** follows the tokens.
 
 ## Usage

@@ -7,13 +7,16 @@ time. It sits straight on the page, with no card or heading.
 
 ## Variants
 
-| `mode`      | Last line                                                 |
-| ----------- | --------------------------------------------------------- |
-| `recording` | [`LoadingDots`](loading-dots.md) "Listening…"             |
-| `paused`    | "Transcribing the last part…" while a chunk is on its way |
-| `finishing` | `LoadingDots` "Transcribing the last part…"               |
-| `ready`     | —                                                         |
-| `elsewhere` | —                                                         |
+| `mode`         | Last line                                                    |
+| -------------- | ------------------------------------------------------------ |
+| `recording`    | [`LoadingDots`](loading-dots.md) "Listening…"                |
+| `paused`       | "Transcribing the last part…" while a chunk is on its way    |
+| `finishing`    | `LoadingDots` "Transcribing the last part…"                  |
+| `ready`        | —                                                            |
+| `elsewhere`    | —                                                            |
+| `uploading`    | `LoadingDots` "Uploading the recording · 42%" (no timestamp) |
+| `interrupted`  | — (see States)                                               |
+| `transcribing` | `LoadingDots` "Transcribing the recording…"                  |
 
 The length, word count and upload progress are on the note's status line.
 
@@ -28,6 +31,8 @@ The length, word count and upload progress are on the note's status line.
 - **Couldn't transcribe:** the line reads "Couldn't transcribe this part." in
   muted italics.
 - **Ready, empty:** "Nothing was said in this recording."
+- **Interrupted:** "The upload stopped before it finished. Delete this note
+  and upload the file again." in `{typography.body-md}`, muted.
 - **Dark mode:** text and hairlines switch with the tokens.
 
 ## Usage

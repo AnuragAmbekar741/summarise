@@ -36,6 +36,9 @@ video file", "Use a file of at most 500 MB", "The file is empty".
 ## States
 
 - **Hover:** the drop zone fills with `{colors.canvas-soft}`.
+- **Drag and drop:** while the dialog is open, a file dropped anywhere in the
+  window is chosen (the browser never opens it), and the zone shows the
+  Dragging state from the moment a file enters the window until it leaves.
 - **Focus:** the drop zone and ✕ show the focus ring.
 - **Closing:** Cancel, ✕, Escape or a click outside close it and forget the
   chosen file.

@@ -7,11 +7,13 @@ note.
 
 ## Variants
 
-| Note status  | Under the title                                          |
-| ------------ | -------------------------------------------------------- |
-| `ready`      | Nothing                                                  |
-| `processing` | [`LoadingDots`](loading-dots.md) "Finishing transcript…" |
-| `recording`  | "Recording", muted                                       |
+| Note status  | Under the title                                                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `ready`      | Nothing                                                                                                                           |
+| `processing` | [`LoadingDots`](loading-dots.md) "Finishing transcript…"                                                                          |
+| `recording`  | "Recording", muted                                                                                                                |
+| `uploading`  | "Uploading · 42%", muted, over a 2px ink progress bar (224px wide, `{colors.hairline}` track), while this tab is sending the file |
+| `uploading`  | "Upload interrupted", muted, when no tab is sending it (closed or reloaded mid-upload)                                            |
 
 ## Tokens
 
@@ -40,4 +42,6 @@ note.
 ## Do's and Don'ts
 
 - Do pass the notes newest first, as `GET /notes` returns them.
+- Do render it inside the uploads provider; the upload percentage comes from
+  this tab.
 - Don't list a note that already has a live card above.

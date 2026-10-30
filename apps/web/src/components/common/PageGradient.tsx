@@ -1,20 +1,11 @@
-import { GradientOrb } from '@/components/common/GradientOrb';
-
 // Spec: docs/design/components/page-gradient.md
-// The atmosphere at the top right of full pages. Dark mode keeps sky and
-// peach; light mode uses a lighter sky alone. The parent must be `relative`
-// and `overflow-hidden`.
+// The sky wash at the top right of every full page. Dark mode dims it with
+// `--wash-opacity`. The parent must be `relative` and `overflow-hidden`.
 export function PageGradient() {
   return (
-    <>
-      <GradientOrb
-        color="sky"
-        className="-top-72 right-[18%] size-[720px] opacity-50 dark:opacity-(--orb-opacity)"
-      />
-      <GradientOrb
-        color="peach"
-        className="-top-64 -right-64 hidden size-[720px] dark:block"
-      />
-    </>
+    <div
+      aria-hidden
+      className="bg-sky-wash pointer-events-none absolute inset-0 opacity-(--wash-opacity)"
+    />
   );
 }

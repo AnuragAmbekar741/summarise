@@ -7,7 +7,6 @@ import { z } from 'zod';
 import { AuthLayout } from '@/components/auth-layout/AuthLayout';
 import { GoogleButton } from '@/components/google-button/GoogleButton';
 import { FieldError } from '@/components/common/FieldError';
-import { GradientOrb } from '@/components/common/GradientOrb';
 import { OrDivider } from '@/components/common/OrDivider';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -52,26 +51,6 @@ export function SignupPage() {
         </>
       }
       description="Record any lecture and get a searchable transcript plus AI notes, organised by course."
-      orbs={
-        <>
-          <GradientOrb
-            color="lavender"
-            className="top-[20%] left-[20%] size-[720px] -translate-1/2"
-          />
-          <GradientOrb
-            color="sky"
-            className="top-[30%] left-[92%] size-[640px] -translate-1/2"
-          />
-          <GradientOrb
-            color="mint"
-            className="top-[88%] left-[54%] size-[640px] -translate-1/2"
-          />
-          <GradientOrb
-            color="rose"
-            className="top-[100%] left-[76%] size-[480px] -translate-1/2"
-          />
-        </>
-      }
     >
       <h2 className="text-display-lg">Create your account</h2>
       <p className="mt-2 text-body-md text-body">

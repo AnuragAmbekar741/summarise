@@ -52,12 +52,7 @@ Terms box: `{colors.canvas-soft}` background, 1px `{colors.hairline}` border,
 
 ## Atmosphere
 
-| Orb        | Position (centre)  | Size  |
-| ---------- | ------------------ | ----- |
-| `lavender` | 20% left, 20% top  | 720px |
-| `sky`      | 92% left, 30% top  | 640px |
-| `mint`     | 54% left, 88% top  | 640px |
-| `rose`     | 76% left, 100% top | 480px |
+[`PageGradient`](../components/page-gradient.md), via `AuthLayout`.
 
 ## Copy
 

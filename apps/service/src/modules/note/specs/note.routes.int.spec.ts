@@ -280,6 +280,25 @@ describe('note routes', async () => {
       });
     });
 
+    it('refuses an uploaded note', async () => {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes/uploads').send({
+        fileName: 'lecture.mp3',
+        contentType: 'audio/mpeg',
+        size: 1024,
+      });
+
+      const response = await agent
+        .post(`/notes/${body.note.id}/stop`)
+        .send({ durationMs: 60_000, totalChunks: 2 });
+
+      expect(response.status).toBe(409);
+      expect(response.body.error).toMatchObject({
+        code: 'NOTE_NOT_RECORDING',
+        message: 'This note is not a recording',
+      });
+    });
+
     it('is ready straight away when every chunk is already in', async () => {
       const agent = await signUpAgent(app, emails);
       const { body } = await agent.post('/notes').send({});

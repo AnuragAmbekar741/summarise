@@ -1,4 +1,4 @@
-import type { BlobStore } from '@summarise/blob';
+import type { ObjectStore } from '@summarise/blob';
 import type { Config } from '@summarise/config';
 import type { RedisClient } from '@summarise/queue';
 import type { SpeechToText } from '@summarise/speech-to-text';
@@ -21,6 +21,8 @@ import { noteRoutes } from './modules/note/note.routes';
 import { createNoteService } from './modules/note/note.service';
 import { recordingRoutes } from './modules/recording/recording.routes';
 import { createRecordingService } from './modules/recording/recording.service';
+import { uploadRoutes } from './modules/upload/upload.routes';
+import { createUploadService } from './modules/upload/upload.service';
 import { transcriptRoutes } from './modules/transcript/transcript.routes';
 import { createTranscriptService } from './modules/transcript/transcript.service';
 
@@ -29,7 +31,7 @@ type AppDeps = {
   redis: RedisClient;
   config: Config;
   // Tests pass a temp-folder store and a fake speech-to-text.
-  blob: BlobStore;
+  blob: ObjectStore;
   speechToText: SpeechToText;
 };
 
@@ -43,13 +45,18 @@ export function createApp({ db, redis, config, blob, speechToText }: AppDeps) {
   const notes = createNoteRepository(db);
   const segments = createTranscriptSegmentRepository(db);
   const transcriptService = createTranscriptService({ notes, segments });
-  const noteService = createNoteService({ notes, transcriptService });
+  const noteService = createNoteService({
+    notes,
+    transcriptService,
+    blob,
+  });
   const recordingService = createRecordingService({
     noteService,
     transcriptService,
     blob,
     speechToText,
   });
+  const uploadService = createUploadService({ notes, noteService, blob });
 
   return (
     express()
@@ -68,6 +75,7 @@ export function createApp({ db, redis, config, blob, speechToText }: AppDeps) {
       .use('/health', healthRoutes(db, redis))
       .use('/auth', authRoutes(db, config, tokens))
       .use('/notes', noteRoutes(noteService, auth))
+      .use('/notes', uploadRoutes(uploadService, auth))
       .use('/notes/:noteId/chunks', recordingRoutes(recordingService, auth))
       .use(
         '/notes/:noteId/transcript',

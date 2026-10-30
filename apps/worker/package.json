@@ -4,14 +4,18 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc",
-    "dev": "tsx watch src/main.ts"
+    "dev": "tsx watch src/main.ts",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@summarise/blob": "workspace:*",
     "@summarise/config": "workspace:*",
     "@summarise/logger": "workspace:*",
-    "@summarise/queue": "workspace:*"
+    "@summarise/queue": "workspace:*",
+    "@summarise/storage": "workspace:*"
   },
   "devDependencies": {
-    "tsx": "^4.23.15"
+    "tsx": "^4.23.15",
+    "vitest": "^5.0.5"
   }
 }

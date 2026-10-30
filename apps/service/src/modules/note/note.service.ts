@@ -4,6 +4,7 @@ import type {
   StopNoteInput,
   UpdateNoteInput,
 } from '@summarise/contract';
+import { uploadKey, type BlobStore } from '@summarise/blob';
 import type { Note, NoteRepository } from '@summarise/storage';
 
 import { HttpError } from '../../common/error.utils';
@@ -12,11 +13,13 @@ import type { TranscriptService } from '../transcript/transcript.service';
 type NoteServiceDeps = {
   notes: NoteRepository;
   transcriptService: TranscriptService;
+  blob: BlobStore;
 };
 
 export function createNoteService({
   notes,
   transcriptService,
+  blob,
 }: NoteServiceDeps) {
   // Another user's note reads as missing, so ids can't be probed.
   async function getOwnedNote(userId: string, noteId: string): Promise<Note> {
@@ -57,6 +60,8 @@ export function createNoteService({
 
     async delete(userId: string, noteId: string): Promise<void> {
       const note = await getOwnedNote(userId, noteId);
+      // File first: if that fails the note is still there to delete again.
+      if (note.source === 'upload') await blob.delete(uploadKey(note.id));
       await notes.delete(note.id);
     },
 
@@ -69,6 +74,13 @@ export function createNoteService({
     ): Promise<PublicNote> {
       const note = await getOwnedNote(userId, noteId);
 
+      if (note.source !== 'recording') {
+        throw new HttpError(
+          409,
+          'NOTE_NOT_RECORDING',
+          'This note is not a recording',
+        );
+      }
       if (note.status !== 'recording') {
         // A retried stop with the same count is fine.
         if (note.totalChunks === input.totalChunks) return toPublicNote(note);
@@ -92,7 +104,7 @@ export function createNoteService({
 
 export type NoteService = ReturnType<typeof createNoteService>;
 
-function toPublicNote(note: Note): PublicNote {
+export function toPublicNote(note: Note): PublicNote {
   return {
     id: note.id,
     title: note.title,

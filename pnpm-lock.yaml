@@ -357,6 +357,9 @@ importers:
 
   apps/worker:
     dependencies:
+      '@summarise/blob':
+        specifier: workspace:*
+        version: link:../../library/blob
       '@summarise/config':
         specifier: workspace:*
         version: link:../../library/config
@@ -366,10 +369,16 @@ importers:
       '@summarise/queue':
         specifier: workspace:*
         version: link:../../library/queue
+      '@summarise/storage':
+        specifier: workspace:*
+        version: link:../../library/storage
     devDependencies:
       tsx:
         specifier: ^4.23.15
         version: 4.23.15
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
 
   library/blob:
     dependencies:

@@ -11,13 +11,19 @@ import {
 
 import { users } from '../user/user.table';
 
-export const noteSource = pgEnum('note_source', ['recording', 'text']);
+export const noteSource = pgEnum('note_source', [
+  'recording',
+  'text',
+  'upload',
+]);
 
-// recording → processing (stopped, last chunks still arriving) → ready.
+// A recording: recording → processing (stopped, last chunks still arriving)
+// → ready. An upload: uploading → processing (being transcribed) → ready.
 export const noteStatus = pgEnum('note_status', [
   'recording',
   'processing',
   'ready',
+  'uploading',
 ]);
 
 export const notes = pgTable(

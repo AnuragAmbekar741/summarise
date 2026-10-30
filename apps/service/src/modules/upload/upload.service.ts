@@ -67,8 +67,11 @@ export function createUploadService({
           'The file has not finished uploading',
         );
       }
+      // Undefined when a concurrent call got there first; that one owns the
+      // upload from here, so this one just returns the note as it is now.
+      const uploaded = await notes.markUploaded(note.id);
       return toPublicNote(
-        await notes.update(note.id, { status: 'processing' }),
+        uploaded ?? (await noteService.getOwnedNote(userId, noteId)),
       );
     },
   };

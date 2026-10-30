@@ -135,6 +135,21 @@ describe('upload routes', async () => {
       expect(response.body.note.status).toBe('processing');
     });
 
+    it('handles two calls at once', async () => {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes/uploads').send(lecture);
+      await blob.put(uploadKey(body.note.id), Buffer.alloc(lecture.size));
+      const complete = () =>
+        agent.post(`/notes/${body.note.id}/upload/complete`);
+
+      const responses = await Promise.all([complete(), complete()]);
+
+      for (const response of responses) {
+        expect(response.status).toBe(200);
+        expect(response.body.note.status).toBe('processing');
+      }
+    });
+
     it('refuses a recorded note', async () => {
       const agent = await signUpAgent(app, emails);
       const { body } = await agent.post('/notes').send({});

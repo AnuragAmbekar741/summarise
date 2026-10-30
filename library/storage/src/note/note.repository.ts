@@ -51,6 +51,17 @@ export function createNoteRepository(db: Database) {
       await db.delete(notes).where(eq(notes.id, id));
     },
 
+    // uploading → processing, only if it is still uploading. When two calls
+    // race, exactly one gets the note back; the other gets undefined.
+    async markUploaded(id: string): Promise<Note | undefined> {
+      const [note] = await db
+        .update(notes)
+        .set({ status: 'processing' })
+        .where(and(eq(notes.id, id), eq(notes.status, 'uploading')))
+        .returning();
+      return note;
+    },
+
     // processing → ready once every expected segment exists. One statement,
     // so the status and the segment count are read together at the moment it
     // runs: a stop and the last chunk racing each other can't both miss it.

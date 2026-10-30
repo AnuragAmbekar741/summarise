@@ -1,6 +1,7 @@
 import * as React from 'react';
 
 import { Logo } from '@/components/common/Logo';
+import { PageGradient } from '@/components/common/PageGradient';
 
 // Spec: docs/design/components/auth-layout.md
 type AuthLayoutProps = {
@@ -8,8 +9,6 @@ type AuthLayoutProps = {
   navAction: React.ReactNode;
   headline: React.ReactNode;
   description: string;
-  // GradientOrb elements placed behind the page.
-  orbs: React.ReactNode;
   // Card content.
   children: React.ReactNode;
 };
@@ -18,12 +17,11 @@ export function AuthLayout({
   navAction,
   headline,
   description,
-  orbs,
   children,
 }: AuthLayoutProps) {
   return (
     <div className="relative min-h-svh overflow-hidden bg-canvas">
-      {orbs}
+      <PageGradient />
 
       {/* Overlays the page so the content centres in the full viewport. */}
       <header className="absolute inset-x-0 top-0 z-20 flex h-16 items-center justify-between px-4 pt-4 sm:px-12">

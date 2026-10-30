@@ -6,7 +6,6 @@ import { Link } from 'react-router-dom';
 import { AuthLayout } from '@/components/auth-layout/AuthLayout';
 import { GoogleButton } from '@/components/google-button/GoogleButton';
 import { FieldError } from '@/components/common/FieldError';
-import { GradientOrb } from '@/components/common/GradientOrb';
 import { OrDivider } from '@/components/common/OrDivider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,26 +45,6 @@ export function LoginPage() {
         </>
       }
       description="Hit record in class. Summarise listens, transcribes, and writes clean notes while you focus on the lecture."
-      orbs={
-        <>
-          <GradientOrb
-            color="peach"
-            className="top-[8%] left-[14%] size-[720px] -translate-1/2"
-          />
-          <GradientOrb
-            color="lavender"
-            className="top-[30%] left-[86%] size-[720px] -translate-1/2"
-          />
-          <GradientOrb
-            color="mint"
-            className="top-[96%] left-[54%] size-[640px] -translate-1/2"
-          />
-          <GradientOrb
-            color="sky"
-            className="top-[92%] left-[68%] size-[520px] -translate-1/2"
-          />
-        </>
-      }
     >
       <h2 className="text-display-lg">Welcome back</h2>
       <p className="mt-3 text-body-md text-body">Log in to your notes.</p>

@@ -9,6 +9,7 @@ import {
   deleteNote,
   putFile,
 } from '@/api/note/note.api';
+import { noteKey } from '@/hooks/note/useNote';
 import { NOTES_KEY } from '@/hooks/note/useNotes';
 
 import { UploadsContext } from './upload.context';
@@ -28,8 +29,12 @@ export function UploadsProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  const refreshNotes = () =>
-    queryClient.invalidateQueries({ queryKey: NOTES_KEY });
+  // The list, and the note's own page if it's open.
+  const refreshNotes = (noteId?: string) =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: NOTES_KEY }),
+      noteId && queryClient.invalidateQueries({ queryKey: noteKey(noteId) }),
+    ]);
 
   async function start(file: File) {
     let noteId: string | undefined;
@@ -55,7 +60,7 @@ export function UploadsProvider({ children }: { children: ReactNode }) {
     } finally {
       // Refetch first: dropping the progress while the list still says
       // uploading would flash "Upload interrupted".
-      await refreshNotes();
+      await refreshNotes(noteId);
       if (noteId) setNoteProgress(noteId, null);
     }
   }

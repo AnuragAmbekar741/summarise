@@ -69,6 +69,13 @@ export function createNoteService({
     ): Promise<PublicNote> {
       const note = await getOwnedNote(userId, noteId);
 
+      if (note.source !== 'recording') {
+        throw new HttpError(
+          409,
+          'NOTE_NOT_RECORDING',
+          'This note is not a recording',
+        );
+      }
       if (note.status !== 'recording') {
         // A retried stop with the same count is fine.
         if (note.totalChunks === input.totalChunks) return toPublicNote(note);

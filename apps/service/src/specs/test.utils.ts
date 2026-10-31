@@ -7,6 +7,7 @@ import {
   createLocalBlobStore,
   type ObjectStore,
 } from '@summarise/blob';
+import { createUploadQueue, type RedisClient } from '@summarise/queue';
 import type { SpeechToText, TranscribeInput } from '@summarise/speech-to-text';
 import type { Express } from 'express';
 import request from 'supertest';
@@ -39,6 +40,13 @@ export function createTempBlobStore() {
     },
   };
   return { dir, blob };
+}
+
+// An upload queue on a Redis list of its own, so the real worker never takes
+// a test's jobs. Delete `key` when done.
+export function createTestUploadQueue(redis: RedisClient) {
+  const key = `test:uploads:${crypto.randomUUID()}`;
+  return { key, queue: createUploadQueue(redis, { key }) };
 }
 
 // Stands in for Groq: returns `transcript(input)`, records every call, and

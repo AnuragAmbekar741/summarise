@@ -4,6 +4,8 @@ import type {
   CreateUploadResponse,
   PublicNote,
 } from '@summarise/contract';
+import { logger } from '@summarise/logger';
+import type { UploadQueue } from '@summarise/queue';
 import type { NoteRepository } from '@summarise/storage';
 
 import { HttpError } from '../../common/error.utils';
@@ -12,11 +14,14 @@ import { titleFromFileName } from './utils/upload.utils';
 
 // How long the browser has to start the upload.
 const UPLOAD_URL_SECONDS = 15 * 60;
+// How long to tell the browser to wait before retrying when Redis is down.
+const QUEUE_RETRY_AFTER_SECONDS = 5;
 
 type UploadServiceDeps = {
   notes: NoteRepository;
   noteService: NoteService;
   blob: ObjectStore;
+  queue: UploadQueue;
 };
 
 // A file the browser uploads straight to the bucket; the service only hands
@@ -25,6 +30,7 @@ export function createUploadService({
   notes,
   noteService,
   blob,
+  queue,
 }: UploadServiceDeps) {
   return {
     async create(
@@ -68,11 +74,30 @@ export function createUploadService({
         );
       }
       // Undefined when a concurrent call got there first; that one owns the
-      // upload from here, so this one just returns the note as it is now.
+      // upload from here (and queues it), so this one just returns the note
+      // as it is now.
       const uploaded = await notes.markUploaded(note.id);
-      return toPublicNote(
-        uploaded ?? (await noteService.getOwnedNote(userId, noteId)),
-      );
+      if (!uploaded) {
+        return toPublicNote(await noteService.getOwnedNote(userId, noteId));
+      }
+
+      // Only the call that won queues the note, so it's transcribed once.
+      try {
+        await queue.push(uploaded.id);
+      } catch (error) {
+        // Back to uploading, so a retry of this call can queue it. Otherwise
+        // the note would sit in processing with no job to finish it.
+        logger.error({ err: error, noteId: uploaded.id }, 'upload not queued');
+        await notes.unmarkUploaded(uploaded.id);
+        throw new HttpError(
+          503,
+          'UPLOAD_QUEUE_UNAVAILABLE',
+          "Transcription can't start right now; try again shortly",
+          undefined,
+          { 'Retry-After': String(QUEUE_RETRY_AFTER_SECONDS) },
+        );
+      }
+      return toPublicNote(uploaded);
     },
   };
 }

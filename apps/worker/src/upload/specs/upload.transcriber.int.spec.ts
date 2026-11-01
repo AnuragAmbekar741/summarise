@@ -184,6 +184,41 @@ describe('upload transcriber', async () => {
     expect((await notes.findById(note.id))?.status).toBe('ready');
   });
 
+  it('gives up at once when asked to wait more than 2 minutes', async () => {
+    const note = await uploadedNote();
+    const { transcriber, calls, waits } = setUp(() => {
+      throw new SpeechToTextError('daily limit', {
+        retryable: true,
+        retryAfterSeconds: 3_600,
+      });
+    });
+
+    const error = await transcriber
+      .transcribe(note, signal())
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(SpeechToTextError);
+    expect(calls).toHaveLength(1);
+    expect(waits).toEqual([]);
+  });
+
+  it('waits at least 1s, even when told not to wait', async () => {
+    const note = await uploadedNote();
+    const { transcriber, waits } = setUp((_, call) => {
+      if (call === 0) {
+        throw new SpeechToTextError('busy', {
+          retryable: true,
+          retryAfterSeconds: 0,
+        });
+      }
+      return `text ${call}`;
+    });
+
+    await transcriber.transcribe(note, signal());
+
+    expect(waits).toEqual([1_000]);
+  });
+
   it('saves a piece the provider rejects as a gap and carries on', async () => {
     const note = await uploadedNote();
     const { transcriber, calls } = setUp((_, call) => {

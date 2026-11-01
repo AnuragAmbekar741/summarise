@@ -25,6 +25,11 @@ const PROMPT_CHARS = 200;
 const MAX_ATTEMPTS = 5;
 // When the provider doesn't say how long to wait: 5s, 10s, 20s, 40s.
 const FIRST_RETRY_MS = 5_000;
+// Asked to wait longer (a daily limit), the job gives up for now instead of
+// holding a worker slot; a later retry picks it up.
+const MAX_WAIT_MS = 2 * 60 * 1000;
+// Never retry straight away, even when told to.
+const MIN_WAIT_MS = 1_000;
 
 type UploadTranscriberDeps = {
   blob: Pick<ObjectStore, 'presignGet' | 'delete'>;
@@ -81,7 +86,8 @@ export function createUploadTranscriber({
           error.retryAfterSeconds !== undefined
             ? error.retryAfterSeconds * 1000
             : FIRST_RETRY_MS * 2 ** (attempt - 1);
-        await wait(ms, signal);
+        if (ms > MAX_WAIT_MS) throw error;
+        await wait(Math.max(ms, MIN_WAIT_MS), signal);
       }
     }
   }

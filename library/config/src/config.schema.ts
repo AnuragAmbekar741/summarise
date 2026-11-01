@@ -23,6 +23,8 @@ export const ConfigSchema = z.object({
   UPLOADS_BUCKET: z.string().min(1).default('uploads'),
   // Speech-to-text. Get one at https://console.groq.com/keys.
   GROQ_API_KEY: z.string().min(1),
+  // How many uploads one worker process transcribes at once.
+  WORKER_CONCURRENCY: z.coerce.number().int().positive().default(2),
 });
 
 export type Config = z.infer<typeof ConfigSchema>;

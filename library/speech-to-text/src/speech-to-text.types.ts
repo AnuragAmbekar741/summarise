@@ -3,6 +3,8 @@ export type TranscribeInput = {
   mimeType: string;
   // The end of the previous chunk's text, so wording carries across cuts.
   prompt?: string;
+  // Cancels the request; transcribe then throws `signal.reason`.
+  signal?: AbortSignal;
 };
 
 // Audio in, text out. Groq today; another provider can implement this later.

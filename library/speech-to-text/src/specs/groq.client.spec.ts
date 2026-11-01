@@ -76,6 +76,24 @@ describe('groq speech-to-text', () => {
     }
   });
 
+  it('passes the signal on, and throws its reason when cancelled', async () => {
+    const controller = new AbortController();
+    const fetch = vi.fn(async (_url: URL | RequestInfo, init?: RequestInit) => {
+      controller.abort();
+      init?.signal?.throwIfAborted();
+      return Response.json({ text: 'never' });
+    });
+    const stt = createGroqSpeechToText({ apiKey: 'key', fetch });
+
+    const error = await stt
+      .transcribe({ audio, mimeType: 'audio/webm', signal: controller.signal })
+      .catch((e: unknown) => e);
+
+    expect(fetch.mock.calls[0]?.[1]?.signal).toBe(controller.signal);
+    expect(error).not.toBeInstanceOf(SpeechToTextError);
+    expect((error as Error).name).toBe('AbortError');
+  });
+
   it('marks an unreadable or text-less success reply as retryable', async () => {
     for (const reply of [
       new Response('<html>proxy error</html>', { status: 200 }),

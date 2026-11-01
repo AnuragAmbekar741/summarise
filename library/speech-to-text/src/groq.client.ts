@@ -20,7 +20,7 @@ export function createGroqSpeechToText({
   fetch: fetchFn = fetch,
 }: GroqOptions): SpeechToText {
   return {
-    async transcribe({ audio, mimeType, prompt }: TranscribeInput) {
+    async transcribe({ audio, mimeType, prompt, signal }: TranscribeInput) {
       const extension = audioFileExtension(mimeType);
       if (!extension) {
         throw new SpeechToTextError(`unsupported audio type: ${mimeType}`, {
@@ -45,8 +45,11 @@ export function createGroqSpeechToText({
           method: 'POST',
           headers: { Authorization: `Bearer ${apiKey}` },
           body: form,
+          signal,
         });
       } catch (error) {
+        // Cancelled by the caller: not a Groq problem.
+        signal?.throwIfAborted();
         throw new SpeechToTextError('could not reach Groq', {
           retryable: true,
           cause: error,

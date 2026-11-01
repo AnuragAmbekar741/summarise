@@ -18,6 +18,16 @@ const PERMANENT_ERRORS = [
   /No such file or directory/,
 ];
 
+// ffmpeg exits as if it had finished when the download breaks off and
+// reconnecting fails. Without this, the rest of the lecture would be
+// silently missing. Seen in its error output, at any exit code.
+const CUT_OFF_ERRORS = [
+  /Stream ends prematurely/,
+  /Input\/output error/,
+  /Connection (reset|refused|timed out)/,
+  /Server returned/,
+];
+
 type DecodeOptions = {
   // Stops ffmpeg and makes the decode throw `signal.reason`.
   signal?: AbortSignal;
@@ -74,14 +84,28 @@ export async function* decodeAudio(
       });
     }
     signal?.throwIfAborted();
-    if (code !== 0) {
-      throw new AudioError(`ffmpeg failed (${code}): ${stderr.trim()}`, {
-        retryable: !PERMANENT_ERRORS.some((pattern) => pattern.test(stderr)),
+    // ffmpeg's messages repeat the source; a presigned URL's signature must
+    // not reach errors or logs. Drops the query of any URL in them.
+    const output = stderr.replace(/(https?:\/\/[^\s?]+)\?\S*/g, '$1').trim();
+    if (
+      code !== 0 &&
+      PERMANENT_ERRORS.some((pattern) => pattern.test(output))
+    ) {
+      throw new AudioError(`ffmpeg failed (${code}): ${output}`, {
+        retryable: false,
+      });
+    }
+    if (code !== 0 || CUT_OFF_ERRORS.some((pattern) => pattern.test(output))) {
+      throw new AudioError(`ffmpeg failed (${code}): ${output}`, {
+        retryable: true,
       });
     }
     // Finished, but complained: usually a damaged part that was skipped.
-    if (stderr.trim()) {
-      logger.warn({ source: redact(source), stderr }, 'ffmpeg warnings');
+    if (output) {
+      logger.warn(
+        { source: redact(source), stderr: output },
+        'ffmpeg warnings',
+      );
     }
   } finally {
     signal?.removeEventListener('abort', stop);
@@ -116,6 +140,10 @@ function ffmpegArgs(source: string): string[] {
     '-map',
     '0:a:0',
     '-vn',
+    // Fill gaps in the file's timestamps (common in browser recordings) with
+    // silence, starting from 0, so sample counts match the real timeline.
+    '-af',
+    'aresample=async=1:first_pts=0',
     '-ac',
     '1',
     '-ar',
@@ -136,5 +164,5 @@ function toSamples(bytes: Buffer): Int16Array {
 
 // A presigned URL carries a signature; keep it out of the logs.
 function redact(source: string) {
-  return source.split('?')[0];
+  return source.split('?')[0] ?? '';
 }

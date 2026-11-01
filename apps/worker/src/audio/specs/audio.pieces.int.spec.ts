@@ -155,6 +155,25 @@ describe('readPieces', () => {
     expect((error as AudioError).retryable).toBe(false);
   });
 
+  // Slow: ffmpeg tries to reconnect for about 30s before giving up.
+  it('fails, worth retrying, when the download breaks off', async () => {
+    const error = await readAll(`${baseUrl}/cut-off/long.mp3`).catch((e) => e);
+
+    expect(error).toBeInstanceOf(AudioError);
+    expect((error as AudioError).retryable).toBe(true);
+    expect((error as AudioError).message).toContain('Stream ends prematurely');
+  }, 60_000);
+
+  it('keeps the URL signature out of the error', async () => {
+    const url = `${baseUrl}/missing.mp3?X-Amz-Signature=secret-signature`;
+
+    const error = await readAll(url).catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(AudioError);
+    expect((error as AudioError).message).toContain('/missing.mp3');
+    expect((error as AudioError).message).not.toContain('secret-signature');
+  });
+
   it('fails, worth retrying, when the server errors', async () => {
     const error = await readAll(`${baseUrl}/server-error`).catch((e) => e);
 
@@ -232,20 +251,30 @@ async function isRunning(path: string) {
 }
 
 async function expectStopped(path: string) {
-  for (let i = 0; i < 20 && (await isRunning(path)); i++) {
+  // Up to 3s, for a slow machine.
+  for (let i = 0; i < 60 && (await isRunning(path)); i++) {
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
   expect(await isRunning(path)).toBe(false);
 }
 
-// Serves files from `dir` with byte ranges, like the bucket does.
-// `/server-error` answers 500.
+// Serves files from `dir` with byte ranges, like the bucket does, ignoring
+// any query. `/server-error` answers 500. `/cut-off/<name>` drops the
+// connection after a third of the file and answers 500 to the reconnect.
 function serve(dir: string): Promise<Server> {
   const server = createServer(async (request, response) => {
-    const name = (request.url ?? '/').slice(1);
+    let name = (request.url ?? '/').slice(1).split('?')[0]!;
     if (name === 'server-error') {
       response.writeHead(500).end();
       return;
+    }
+    const cutOff = name.startsWith('cut-off/');
+    if (cutOff) {
+      if (request.headers.range && !/bytes=0-/.test(request.headers.range)) {
+        response.writeHead(500).end();
+        return;
+      }
+      name = name.slice('cut-off/'.length);
     }
     const path = join(dir, name);
     const size = await stat(path).then(
@@ -264,6 +293,13 @@ function serve(dir: string): Promise<Server> {
       'Content-Length': end - start + 1,
       ...(range && { 'Content-Range': `bytes ${start}-${end}/${size}` }),
     });
+    if (cutOff) {
+      const third = Math.floor(size / 3);
+      createReadStream(path, { start: 0, end: third })
+        .on('end', () => response.destroy())
+        .pipe(response, { end: false });
+      return;
+    }
     createReadStream(path, { start, end }).pipe(response);
   });
   return new Promise((resolve) =>

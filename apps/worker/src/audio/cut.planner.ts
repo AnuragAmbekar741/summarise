@@ -84,7 +84,8 @@ export function createCutPlanner() {
 }
 
 // Where to cut `audio` (at least CUT_BY samples long): the centre of the
-// quietest 300ms stretch whose centre lies between 25s and 35s. Comparing
+// quietest 300ms stretch that lies within 24.85s–35s, so the cut falls
+// between 25s and 34.85s. Comparing
 // stretches with each other, instead of against a fixed volume, works in a
 // noisy room and with a quiet microphone alike. Reads only the first CUT_BY
 // samples.

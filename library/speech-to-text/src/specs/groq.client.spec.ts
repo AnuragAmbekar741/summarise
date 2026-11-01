@@ -106,6 +106,15 @@ describe('groq speech-to-text', () => {
     }
   });
 
+  it('marks a bad or revoked key (401, 403) as retryable', async () => {
+    for (const status of [401, 403]) {
+      const { stt } = groqWith(new Response('invalid key', { status }));
+      await expect(
+        stt.transcribe({ audio, mimeType: 'audio/webm' }),
+      ).rejects.toMatchObject({ retryable: true });
+    }
+  });
+
   it('marks a 400 as not retryable', async () => {
     const { stt } = groqWith(new Response('bad file', { status: 400 }));
 

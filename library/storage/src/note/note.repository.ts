@@ -111,6 +111,28 @@ export function createNoteRepository(db: Database) {
         .returning();
       return note;
     },
+
+    // An upload's transcription is done: processing → ready, saving how many
+    // pieces it had and how long it is. Only if every piece's segment exists,
+    // checked in the same statement. Returns the note if it became ready.
+    async finishUpload(
+      id: string,
+      { totalChunks, durationMs }: { totalChunks: number; durationMs: number },
+    ): Promise<Note | undefined> {
+      const [note] = await db
+        .update(notes)
+        .set({ status: 'ready', totalChunks, durationMs, endedAt: new Date() })
+        .where(
+          and(
+            eq(notes.id, id),
+            eq(notes.source, 'upload'),
+            eq(notes.status, 'processing'),
+            sql`(select count(*) from ${transcriptSegments} where ${transcriptSegments.noteId} = ${notes.id}) >= ${totalChunks}`,
+          ),
+        )
+        .returning();
+      return note;
+    },
   };
 }
 

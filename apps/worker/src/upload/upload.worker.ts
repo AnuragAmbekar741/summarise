@@ -112,9 +112,20 @@ export function createUploadWorker({
   return {
     async start(): Promise<void> {
       stopping = false;
-      opened = await Promise.all(
+      const results = await Promise.allSettled(
         Array.from({ length: concurrency + 1 }, () => openQueue()),
       );
+      const ready = results.flatMap((result) =>
+        result.status === 'fulfilled' ? [result.value] : [],
+      );
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          // Close the ones that did open, so they don't leak.
+          await Promise.all(ready.map(({ close }) => close()));
+          throw result.reason;
+        }
+      }
+      opened = ready;
       const [recovery, ...loopQueues] = opened.map(({ queue }) => queue);
       await recover(recovery!);
       recoverTimer = setInterval(() => void recover(recovery!), recoverEveryMs);

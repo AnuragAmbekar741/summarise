@@ -324,6 +324,25 @@ describe('upload worker', async () => {
     held.release();
   });
 
+  it('closes the connections it opened when one fails to open', async () => {
+    const keys = testKeys();
+    let opens = 0;
+    let closes = 0;
+    const worker = createUploadWorker({
+      async openQueue() {
+        opens += 1;
+        if (opens === 3) throw new Error('redis unreachable');
+        return { queue: keys.queue, close: async () => void (closes += 1) };
+      },
+      notes,
+      handle: async () => {},
+      concurrency: 2,
+    });
+
+    await expect(worker.start()).rejects.toThrow('redis unreachable');
+    expect(closes).toBe(2);
+  });
+
   it('finishes running jobs before stopping', async () => {
     const keys = testKeys();
     const held = heldHandler();

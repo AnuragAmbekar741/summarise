@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises';
 import { uploadKey } from '@summarise/blob';
 import { config } from '@summarise/config';
 import { UPLOAD_MAX_BYTES } from '@summarise/contract';
-import { createRedisClient } from '@summarise/queue';
+import { createRedisClient, type UploadQueue } from '@summarise/queue';
 import { createDatabase } from '@summarise/storage';
 import request from 'supertest';
 import { afterAll, describe, expect, it } from 'vitest';
@@ -12,6 +12,7 @@ import { createApp } from '../../../app';
 import {
   createFakeSpeechToText,
   createTempBlobStore,
+  createTestUploadQueue,
   signUpAgent,
 } from '../../../specs/test.utils';
 
@@ -21,16 +22,28 @@ describe('upload routes', async () => {
   const db = createDatabase(config.DATABASE_URL);
   const redis = await createRedisClient(config.REDIS_URL);
   const { dir, blob } = createTempBlobStore();
-  const app = createApp({
-    db,
-    redis,
-    config,
-    blob,
-    speechToText: createFakeSpeechToText().speechToText,
-  });
+  const { key: queueKey, queue } = createTestUploadQueue(redis);
+  function buildApp(uploadQueue: UploadQueue) {
+    return createApp({
+      db,
+      redis,
+      config,
+      blob,
+      speechToText: createFakeSpeechToText().speechToText,
+      uploadQueue,
+    });
+  }
+  const app = buildApp(queue);
   const emails: string[] = [];
 
+  // The note ids queued so far, oldest first.
+  async function queuedNoteIds() {
+    const jobs = await redis.lRange(queueKey, 0, -1);
+    return jobs.reverse().map((job) => JSON.parse(job).noteId as string);
+  }
+
   afterAll(async () => {
+    await redis.del(queueKey);
     await db.$client.query('delete from users where email = any($1)', [emails]);
     await db.$client.end();
     await redis.close();
@@ -104,6 +117,7 @@ describe('upload routes', async () => {
         id: body.note.id,
         status: 'processing',
       });
+      expect(await queuedNoteIds()).toContain(body.note.id);
     });
 
     it('refuses while the file has not arrived', async () => {
@@ -116,6 +130,7 @@ describe('upload routes', async () => {
 
       expect(response.status).toBe(409);
       expect(response.body.error.code).toBe('UPLOAD_NOT_FOUND');
+      expect(await queuedNoteIds()).not.toContain(body.note.id);
       expect((await agent.get(`/notes/${body.note.id}`)).body.note.status).toBe(
         'uploading',
       );
@@ -133,6 +148,9 @@ describe('upload routes', async () => {
 
       expect(response.status).toBe(200);
       expect(response.body.note.status).toBe('processing');
+      expect(
+        (await queuedNoteIds()).filter((id) => id === body.note.id),
+      ).toHaveLength(1);
     });
 
     it('handles two calls at once', async () => {
@@ -148,6 +166,40 @@ describe('upload routes', async () => {
         expect(response.status).toBe(200);
         expect(response.body.note.status).toBe('processing');
       }
+      expect(
+        (await queuedNoteIds()).filter((id) => id === body.note.id),
+      ).toHaveLength(1);
+    });
+
+    it('puts the note back to uploading when it cannot be queued', async () => {
+      let redisDown = true;
+      const flakyApp = buildApp({
+        async push(noteId) {
+          if (redisDown) throw new Error('redis unreachable');
+          await queue.push(noteId);
+        },
+      });
+      const agent = await signUpAgent(flakyApp, emails);
+      const { body } = await agent.post('/notes/uploads').send(lecture);
+      await blob.put(uploadKey(body.note.id), Buffer.alloc(lecture.size));
+      const complete = () =>
+        agent.post(`/notes/${body.note.id}/upload/complete`);
+
+      const failed = await complete();
+
+      expect(failed.status).toBe(503);
+      expect(failed.headers['retry-after']).toBe('5');
+      expect(failed.body.error.code).toBe('UPLOAD_QUEUE_UNAVAILABLE');
+      expect((await agent.get(`/notes/${body.note.id}`)).body.note.status).toBe(
+        'uploading',
+      );
+
+      redisDown = false;
+      const retried = await complete();
+
+      expect(retried.status).toBe(200);
+      expect(retried.body.note.status).toBe('processing');
+      expect(await queuedNoteIds()).toContain(body.note.id);
     });
 
     it('refuses a recorded note', async () => {

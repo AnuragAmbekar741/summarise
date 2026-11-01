@@ -13,6 +13,7 @@ import { createApp } from '../../../app';
 import {
   createFakeSpeechToText,
   createTempBlobStore,
+  createTestUploadQueue,
   signUpAgent,
 } from '../../../specs/test.utils';
 import { MAX_CHUNK_BYTES } from '../utils/upload.middleware';
@@ -32,6 +33,7 @@ describe('recording routes', async () => {
     config,
     blob,
     speechToText: stt.speechToText,
+    uploadQueue: createTestUploadQueue(redis).queue,
   });
   const emails: string[] = [];
 
@@ -291,6 +293,7 @@ describe('recording routes', async () => {
       redis,
       config,
       blob,
+      uploadQueue: createTestUploadQueue(redis).queue,
       speechToText: {
         async transcribe(input) {
           if (holdNext) await held;

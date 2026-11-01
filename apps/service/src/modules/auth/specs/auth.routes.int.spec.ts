@@ -8,6 +8,7 @@ import { createApp } from '../../../app';
 import {
   createFakeSpeechToText,
   createTempBlobStore,
+  createTestUploadQueue,
 } from '../../../specs/test.utils';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '../auth.constants';
 
@@ -23,6 +24,7 @@ describe('auth routes', async () => {
     config,
     blob: createTempBlobStore().blob,
     speechToText: createFakeSpeechToText().speechToText,
+    uploadQueue: createTestUploadQueue(redis).queue,
   });
   const createdEmails: string[] = [];
 

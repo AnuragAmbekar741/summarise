@@ -1,6 +1,6 @@
 import type { ObjectStore } from '@summarise/blob';
 import type { Config } from '@summarise/config';
-import type { RedisClient } from '@summarise/queue';
+import type { RedisClient, UploadQueue } from '@summarise/queue';
 import type { SpeechToText } from '@summarise/speech-to-text';
 import {
   createNoteRepository,
@@ -33,9 +33,18 @@ type AppDeps = {
   // Tests pass a temp-folder store and a fake speech-to-text.
   blob: ObjectStore;
   speechToText: SpeechToText;
+  // Tests pass one on their own Redis list, so the worker never sees their jobs.
+  uploadQueue: UploadQueue;
 };
 
-export function createApp({ db, redis, config, blob, speechToText }: AppDeps) {
+export function createApp({
+  db,
+  redis,
+  config,
+  blob,
+  speechToText,
+  uploadQueue,
+}: AppDeps) {
   const tokens = createTokens({
     accessSecret: config.JWT_ACCESS_SECRET,
     refreshSecret: config.JWT_REFRESH_SECRET,
@@ -56,7 +65,12 @@ export function createApp({ db, redis, config, blob, speechToText }: AppDeps) {
     blob,
     speechToText,
   });
-  const uploadService = createUploadService({ notes, noteService, blob });
+  const uploadService = createUploadService({
+    notes,
+    noteService,
+    blob,
+    queue: uploadQueue,
+  });
 
   return (
     express()

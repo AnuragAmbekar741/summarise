@@ -62,6 +62,15 @@ export function createNoteRepository(db: Database) {
       return note;
     },
 
+    // processing → uploading, undoing markUploaded when the note couldn't be
+    // queued, so the browser's retry of "upload complete" can try again.
+    async unmarkUploaded(id: string): Promise<void> {
+      await db
+        .update(notes)
+        .set({ status: 'uploading' })
+        .where(and(eq(notes.id, id), eq(notes.status, 'processing')));
+    },
+
     // Uploads that never finished: still uploading and created before
     // `before`. Deletes them and returns their ids.
     async deleteStaleUploads(before: Date): Promise<string[]> {

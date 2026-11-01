@@ -8,6 +8,7 @@ import { createApp } from '../../../app';
 import {
   createFakeSpeechToText,
   createTempBlobStore,
+  createTestUploadQueue,
 } from '../../../specs/test.utils';
 
 // Runs against the real Postgres and Redis from docker compose.
@@ -20,6 +21,7 @@ describe('GET /health', async () => {
     config,
     blob: createTempBlobStore().blob,
     speechToText: createFakeSpeechToText().speechToText,
+    uploadQueue: createTestUploadQueue(redis).queue,
   });
 
   afterAll(() => db.$client.end());

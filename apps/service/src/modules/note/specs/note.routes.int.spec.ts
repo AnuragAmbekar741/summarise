@@ -10,6 +10,7 @@ import { createApp } from '../../../app';
 import {
   createFakeSpeechToText,
   createTempBlobStore,
+  createTestUploadQueue,
   signUpAgent,
 } from '../../../specs/test.utils';
 
@@ -25,6 +26,7 @@ describe('note routes', async () => {
     config,
     blob,
     speechToText: createFakeSpeechToText().speechToText,
+    uploadQueue: createTestUploadQueue(redis).queue,
   });
   const emails: string[] = [];
 

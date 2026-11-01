@@ -1,7 +1,7 @@
 import { createS3BlobStore } from '@summarise/blob';
 import { config } from '@summarise/config';
 import { logger } from '@summarise/logger';
-import { createRedisClient } from '@summarise/queue';
+import { createRedisClient, createUploadQueue } from '@summarise/queue';
 import { createGroqSpeechToText } from '@summarise/speech-to-text';
 import { createDatabase } from '@summarise/storage';
 
@@ -22,6 +22,7 @@ const app = createApp({
     bucket: config.UPLOADS_BUCKET,
   }),
   speechToText: createGroqSpeechToText({ apiKey: config.GROQ_API_KEY }),
+  uploadQueue: createUploadQueue(redis),
 });
 
 app.listen(config.PORT, () => {

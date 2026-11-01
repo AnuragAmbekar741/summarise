@@ -1,0 +1,125 @@
+import { logger } from '@summarise/logger';
+import type { TakenJob, UploadQueue } from '@summarise/queue';
+import type { Note, NoteRepository } from '@summarise/storage';
+
+// A queue on a Redis connection of its own, and a way to close it.
+export type OpenedQueue = { queue: UploadQueue; close: () => Promise<void> };
+
+type UploadWorkerDeps = {
+  // Called once per loop, plus once for recovery: `take` blocks its
+  // connection, so loops can't share one.
+  openQueue: () => Promise<OpenedQueue>;
+  notes: NoteRepository;
+  // The work for one uploaded note.
+  handle: (note: Note) => Promise<void>;
+  concurrency: number;
+  workerId?: string;
+  // How long `take` waits before checking whether to stop.
+  takeTimeoutSeconds?: number;
+  // Must be well under the queue's lock time.
+  renewEveryMs?: number;
+  recoverEveryMs?: number;
+};
+
+// Runs `concurrency` loops that each take a job, run it, and take the next.
+// A note is locked while it runs, so two copies of its job never run at once,
+// and a job whose worker crashed is put back once its lock expires.
+export function createUploadWorker({
+  openQueue,
+  notes,
+  handle,
+  concurrency,
+  workerId = crypto.randomUUID(),
+  takeTimeoutSeconds = 5,
+  renewEveryMs = 20_000,
+  recoverEveryMs = 60_000,
+}: UploadWorkerDeps) {
+  let stopping = false;
+  let opened: OpenedQueue[] = [];
+  let loops: Promise<void>[] = [];
+  let recoverTimer: NodeJS.Timeout | undefined;
+
+  async function recover(queue: UploadQueue) {
+    try {
+      const noteIds = await queue.requeueOrphans();
+      if (noteIds.length > 0) logger.info({ noteIds }, 'requeued upload jobs');
+    } catch (error) {
+      logger.error({ err: error }, 'upload job recovery failed');
+    }
+  }
+
+  async function loop(queue: UploadQueue) {
+    while (!stopping) {
+      try {
+        const job = await queue.take(takeTimeoutSeconds);
+        if (job) await run(queue, job);
+      } catch (error) {
+        // Redis is down. Wait a little rather than spin.
+        logger.error({ err: error }, 'upload worker loop failed');
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+  }
+
+  async function run(queue: UploadQueue, job: TakenJob) {
+    const { noteId } = job;
+    if (!(await queue.lock(noteId, workerId))) {
+      // Another worker is running this note: this copy is a duplicate.
+      await queue.finish(job, workerId);
+      return;
+    }
+    const renewal = setInterval(() => {
+      queue
+        .renew(noteId, workerId)
+        .then((owned) => {
+          if (!owned) logger.warn({ noteId }, 'lost upload job lock');
+        })
+        .catch((error: unknown) =>
+          logger.error({ err: error, noteId }, 'upload job lock renew failed'),
+        );
+    }, renewEveryMs);
+    try {
+      const note = await notes.findById(noteId);
+      // Deleted, or already done by an earlier copy of this job.
+      if (note?.source !== 'upload' || note.status !== 'processing') {
+        logger.info({ noteId }, 'skipped upload job');
+        return;
+      }
+      await handle(note);
+    } catch (error) {
+      // Dropped for now; retries come later.
+      logger.error({ err: error, noteId }, 'upload job failed');
+    } finally {
+      clearInterval(renewal);
+      await queue.finish(job, workerId);
+    }
+  }
+
+  return {
+    async start(): Promise<void> {
+      stopping = false;
+      opened = await Promise.all(
+        Array.from({ length: concurrency + 1 }, () => openQueue()),
+      );
+      const [recovery, ...loopQueues] = opened.map(({ queue }) => queue);
+      await recover(recovery!);
+      recoverTimer = setInterval(() => void recover(recovery!), recoverEveryMs);
+      loops = loopQueues.map((queue) => loop(queue));
+      logger.info({ workerId, concurrency }, 'upload worker started');
+    },
+
+    // Takes no new jobs, waits for the running ones, then closes the
+    // connections.
+    async stop(): Promise<void> {
+      stopping = true;
+      clearInterval(recoverTimer);
+      await Promise.all(loops);
+      await Promise.all(opened.map(({ close }) => close()));
+      opened = [];
+      loops = [];
+      logger.info({ workerId }, 'upload worker stopped');
+    },
+  };
+}
+
+export type UploadWorker = ReturnType<typeof createUploadWorker>;

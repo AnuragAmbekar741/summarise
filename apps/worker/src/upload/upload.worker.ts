@@ -10,13 +10,16 @@ type UploadWorkerDeps = {
   // connection, so loops can't share one.
   openQueue: () => Promise<OpenedQueue>;
   notes: NoteRepository;
-  // The work for one uploaded note.
-  handle: (note: Note) => Promise<void>;
+  // The work for one uploaded note. `signal` fires when the lock is lost:
+  // another worker may now run the note, so stop.
+  handle: (note: Note, signal: AbortSignal) => Promise<void>;
   concurrency: number;
   workerId?: string;
   // How long `take` waits before checking whether to stop.
   takeTimeoutSeconds?: number;
-  // Must be well under the queue's lock time.
+  // The queue's lock time.
+  lockMs?: number;
+  // Must be well under the lock time.
   renewEveryMs?: number;
   recoverEveryMs?: number;
 };
@@ -31,6 +34,7 @@ export function createUploadWorker({
   concurrency,
   workerId = crypto.randomUUID(),
   takeTimeoutSeconds = 5,
+  lockMs = 60_000,
   renewEveryMs = 20_000,
   recoverEveryMs = 60_000,
 }: UploadWorkerDeps) {
@@ -70,15 +74,26 @@ export function createUploadWorker({
       await queue.drop(job);
       return;
     }
+    const controller = new AbortController();
+    function lose(message: string) {
+      if (controller.signal.aborted) return;
+      logger.warn({ noteId }, message);
+      controller.abort();
+    }
+    let renewedAt = Date.now();
     const renewal = setInterval(() => {
       queue
         .renew(noteId, owner)
         .then((owned) => {
-          if (!owned) logger.warn({ noteId }, 'lost upload job lock');
+          if (owned) renewedAt = Date.now();
+          else lose('lost upload job lock');
         })
-        .catch((error: unknown) =>
-          logger.error({ err: error, noteId }, 'upload job lock renew failed'),
-        );
+        .catch((error: unknown) => {
+          logger.error({ err: error, noteId }, 'upload job lock renew failed');
+          // Redis is unreachable. Once a whole lock time has gone by without
+          // a renew, the lock has expired anyway.
+          if (Date.now() - renewedAt >= lockMs) lose('upload job lock expired');
+        });
     }, renewEveryMs);
     try {
       const note = await notes.findById(noteId);
@@ -87,7 +102,7 @@ export function createUploadWorker({
         logger.info({ noteId }, 'skipped upload job');
         return;
       }
-      await handle(note);
+      await handle(note, controller.signal);
     } catch (error) {
       // Dropped for now; retries come later.
       logger.error({ err: error, noteId }, 'upload job failed');

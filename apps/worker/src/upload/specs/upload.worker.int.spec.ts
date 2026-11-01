@@ -52,14 +52,27 @@ describe('upload worker', async () => {
 
   function startWorker(
     keys: ReturnType<typeof testKeys>,
-    handle: (note: Note) => Promise<void>,
-    options: { concurrency?: number; workerId?: string } = {},
+    handle: (note: Note, signal: AbortSignal) => Promise<void>,
+    // `renewFails`: every renew throws, as when Redis is unreachable.
+    options: {
+      concurrency?: number;
+      workerId?: string;
+      renewFails?: boolean;
+    } = {},
   ) {
     const worker = createUploadWorker({
       async openQueue() {
         const connection = await createRedisClient(config.REDIS_URL);
+        const queue = createUploadQueue(connection, keys);
         return {
-          queue: createUploadQueue(connection, keys),
+          queue: options.renewFails
+            ? {
+                ...queue,
+                async renew() {
+                  throw new Error('redis unreachable');
+                },
+              }
+            : queue,
           close: async () => void (await connection.close()),
         };
       },
@@ -68,6 +81,7 @@ describe('upload worker', async () => {
       concurrency: options.concurrency ?? 2,
       workerId: options.workerId,
       takeTimeoutSeconds: 0.1,
+      lockMs: keys.lockMs,
       renewEveryMs: 50,
       recoverEveryMs: 100,
     });
@@ -89,16 +103,18 @@ describe('upload worker', async () => {
     const running: string[] = [];
     const calls: string[] = [];
     const overlaps: string[] = [];
+    const signals: AbortSignal[] = [];
     let release!: () => void;
     const held = new Promise<void>((resolve) => (release = resolve));
-    const handle = vi.fn(async (note: Note) => {
+    const handle = vi.fn(async (note: Note, signal: AbortSignal) => {
       calls.push(note.id);
+      signals.push(signal);
       if (running.includes(note.id)) overlaps.push(note.id);
       running.push(note.id);
       await held;
       running.splice(running.indexOf(note.id), 1);
     });
-    return { handle, running, calls, overlaps, release };
+    return { handle, running, calls, overlaps, signals, release };
   }
 
   async function listLengths(keys: ReturnType<typeof testKeys>) {
@@ -122,6 +138,7 @@ describe('upload worker', async () => {
     expect(handle).toHaveBeenCalledOnce();
     expect(handle).toHaveBeenCalledWith(
       expect.objectContaining({ id: note.id }),
+      expect.any(AbortSignal),
     );
     expect(await redis.exists(`${keys.lockPrefix}${note.id}`)).toBe(0);
   });
@@ -265,9 +282,46 @@ describe('upload worker', async () => {
     await vi.waitFor(() => expect(held.running).toEqual([note.id]));
     await new Promise((resolve) => setTimeout(resolve, 400));
 
-    // Renewed, so recovery has not put it back.
+    // Renewed, so recovery has not put it back and the job was not stopped.
     expect(await listLengths(keys)).toEqual({ pending: 0, active: 1 });
     expect(held.calls).toEqual([note.id]);
+    expect(held.signals[0]?.aborted).toBe(false);
+    held.release();
+  });
+
+  it('tells the job to stop when its lock is taken over', async () => {
+    const keys = testKeys();
+    const held = heldHandler();
+    const note = await uploadedNote();
+    await keys.queue.push(note.id);
+    await startWorker(keys, held.handle).start();
+    await vi.waitFor(() => expect(held.running).toEqual([note.id]));
+
+    // As if the lock expired and another worker locked the note.
+    const lockKey = `${keys.lockPrefix}${note.id}`;
+    await redis.set(lockKey, 'other-worker');
+
+    await vi.waitFor(() => expect(held.signals[0]?.aborted).toBe(true));
+    held.release();
+    // Finishing leaves the other worker's lock alone.
+    await vi.waitFor(async () =>
+      expect(await listLengths(keys)).toEqual({ pending: 0, active: 0 }),
+    );
+    expect(await redis.get(lockKey)).toBe('other-worker');
+  });
+
+  it('tells the job to stop when Redis is unreachable for a lock time', async () => {
+    const keys = testKeys(300);
+    const held = heldHandler();
+    const note = await uploadedNote();
+    await keys.queue.push(note.id);
+    await startWorker(keys, held.handle, { renewFails: true }).start();
+    await vi.waitFor(() => expect(held.running).toEqual([note.id]));
+
+    // Renews are failing, but the lock time has not gone by yet.
+    expect(held.signals[0]?.aborted).toBe(false);
+
+    await vi.waitFor(() => expect(held.signals[0]?.aborted).toBe(true));
     held.release();
   });
 

@@ -48,11 +48,13 @@ export function createUploadWorker({
     }
   }
 
-  async function loop(queue: UploadQueue) {
+  // `owner` is what this loop writes into a lock: unique per loop, so two
+  // loops in this process can't renew or release each other's lock.
+  async function loop(queue: UploadQueue, owner: string) {
     while (!stopping) {
       try {
         const job = await queue.take(takeTimeoutSeconds);
-        if (job) await run(queue, job);
+        if (job) await run(queue, job, owner);
       } catch (error) {
         // Redis is down. Wait a little rather than spin.
         logger.error({ err: error }, 'upload worker loop failed');
@@ -61,16 +63,16 @@ export function createUploadWorker({
     }
   }
 
-  async function run(queue: UploadQueue, job: TakenJob) {
+  async function run(queue: UploadQueue, job: TakenJob, owner: string) {
     const { noteId } = job;
-    if (!(await queue.lock(noteId, workerId))) {
-      // Another worker is running this note: this copy is a duplicate.
-      await queue.finish(job, workerId);
+    if (!(await queue.lock(noteId, owner))) {
+      // Another loop is running this note: this copy is a duplicate.
+      await queue.drop(job);
       return;
     }
     const renewal = setInterval(() => {
       queue
-        .renew(noteId, workerId)
+        .renew(noteId, owner)
         .then((owned) => {
           if (!owned) logger.warn({ noteId }, 'lost upload job lock');
         })
@@ -91,7 +93,7 @@ export function createUploadWorker({
       logger.error({ err: error, noteId }, 'upload job failed');
     } finally {
       clearInterval(renewal);
-      await queue.finish(job, workerId);
+      await queue.finish(job, owner);
     }
   }
 
@@ -104,7 +106,9 @@ export function createUploadWorker({
       const [recovery, ...loopQueues] = opened.map(({ queue }) => queue);
       await recover(recovery!);
       recoverTimer = setInterval(() => void recover(recovery!), recoverEveryMs);
-      loops = loopQueues.map((queue) => loop(queue));
+      loops = loopQueues.map((queue, index) =>
+        loop(queue, `${workerId}:${index}`),
+      );
       logger.info({ workerId, concurrency }, 'upload worker started');
     },
 

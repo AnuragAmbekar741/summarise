@@ -83,19 +83,22 @@ describe('upload worker', async () => {
     });
   }
 
-  // A handler that keeps each job running until `release()`.
+  // A handler that keeps each job running until `release()`. `overlaps` gets
+  // a note id whenever that note starts while it is already running.
   function heldHandler() {
     const running: string[] = [];
     const calls: string[] = [];
+    const overlaps: string[] = [];
     let release!: () => void;
     const held = new Promise<void>((resolve) => (release = resolve));
     const handle = vi.fn(async (note: Note) => {
       calls.push(note.id);
+      if (running.includes(note.id)) overlaps.push(note.id);
       running.push(note.id);
       await held;
       running.splice(running.indexOf(note.id), 1);
     });
-    return { handle, running, calls, release };
+    return { handle, running, calls, overlaps, release };
   }
 
   async function listLengths(keys: ReturnType<typeof testKeys>) {
@@ -152,6 +155,12 @@ describe('upload worker', async () => {
       expect(held.calls).toEqual([note.id]);
       expect(await listLengths(keys)).toEqual({ pending: 0, active: 1 });
     });
+    // Let several recovery passes (every 100ms) run before checking it
+    // stayed that way: the lock is still held and nothing ran again.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    expect(held.overlaps).toEqual([]);
+    expect(held.calls).toEqual([note.id]);
+    expect(await redis.exists(`${keys.lockPrefix}${note.id}`)).toBe(1);
     held.release();
     await vi.waitFor(async () =>
       expect(await listLengths(keys)).toEqual({ pending: 0, active: 0 }),

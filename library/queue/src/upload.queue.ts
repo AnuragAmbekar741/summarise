@@ -101,6 +101,12 @@ export function createUploadQueue(
       return result === 1;
     },
 
+    // Removes a duplicate job from the active list. Leaves the lock alone:
+    // it belongs to the copy that is running.
+    async drop(job: TakenJob): Promise<void> {
+      await redis.lRem(activeKey, 1, job.raw);
+    },
+
     // Removes the job from the active list and releases its lock.
     async finish(job: TakenJob, workerId: string): Promise<void> {
       await redis.lRem(activeKey, 1, job.raw);

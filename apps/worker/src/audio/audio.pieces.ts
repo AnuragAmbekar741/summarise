@@ -21,6 +21,7 @@ type ReadPiecesOptions = {
   signal?: AbortSignal;
   // Injected in tests.
   ffmpegPath?: string;
+  stallTimeoutMs?: number;
 };
 
 // The audio of `source` (a URL or a file path) as ~30s pieces, cut at quiet

@@ -33,6 +33,9 @@ type DecodeOptions = {
   signal?: AbortSignal;
   // Injected in tests.
   ffmpegPath?: string;
+  // A download that sends nothing for this long is treated as dropped (and
+  // reconnected), rather than waited on forever. URLs only.
+  stallTimeoutMs?: number;
 };
 
 // Decodes the first audio track of `source` (a URL or a file path) into
@@ -41,10 +44,14 @@ type DecodeOptions = {
 // ffmpeg is stopped when the caller stops reading, or the signal fires.
 export async function* decodeAudio(
   source: string,
-  { signal, ffmpegPath = 'ffmpeg' }: DecodeOptions = {},
+  {
+    signal,
+    ffmpegPath = 'ffmpeg',
+    stallTimeoutMs = 60_000,
+  }: DecodeOptions = {},
 ): AsyncGenerator<Int16Array> {
   signal?.throwIfAborted();
-  const ffmpeg = spawn(ffmpegPath, ffmpegArgs(source), {
+  const ffmpeg = spawn(ffmpegPath, ffmpegArgs(source, stallTimeoutMs), {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
@@ -113,11 +120,14 @@ export async function* decodeAudio(
   }
 }
 
-function ffmpegArgs(source: string): string[] {
+function ffmpegArgs(source: string, stallTimeoutMs: number): string[] {
   // A long pause while the caller works can drop the download; these make
   // ffmpeg reconnect and carry on from where it was. URLs only.
   const reconnect = /^https?:\/\//.test(source)
     ? [
+        // In microseconds.
+        '-rw_timeout',
+        String(stallTimeoutMs * 1000),
         '-reconnect',
         '1',
         '-reconnect_streamed',

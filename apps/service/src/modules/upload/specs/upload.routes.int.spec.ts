@@ -174,6 +174,7 @@ describe('upload routes', async () => {
     it('puts the note back to uploading when it cannot be queued', async () => {
       let redisDown = true;
       const flakyApp = buildApp({
+        ...queue,
         async push(noteId) {
           if (redisDown) throw new Error('redis unreachable');
           await queue.push(noteId);

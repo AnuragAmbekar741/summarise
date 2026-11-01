@@ -12,6 +12,12 @@ export function createNoteRepository(db: Database) {
       return note!;
     },
 
+    // Not scoped to a user: for the worker, never for a request.
+    async findById(id: string): Promise<Note | undefined> {
+      const [note] = await db.select().from(notes).where(eq(notes.id, id));
+      return note;
+    },
+
     // Scoped to the owner, so another user's note reads as missing.
     async findByIdForUser(
       id: string,

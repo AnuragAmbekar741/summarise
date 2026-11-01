@@ -17,10 +17,6 @@ type UploadWorkerDeps = {
   workerId?: string;
   // How long `take` waits before checking whether to stop.
   takeTimeoutSeconds?: number;
-  // The queue's lock time.
-  lockMs?: number;
-  // Must be well under the lock time.
-  renewEveryMs?: number;
   recoverEveryMs?: number;
 };
 
@@ -34,8 +30,6 @@ export function createUploadWorker({
   concurrency,
   workerId = crypto.randomUUID(),
   takeTimeoutSeconds = 5,
-  lockMs = 60_000,
-  renewEveryMs = 20_000,
   recoverEveryMs = 60_000,
 }: UploadWorkerDeps) {
   let stopping = false;
@@ -81,6 +75,7 @@ export function createUploadWorker({
       controller.abort();
     }
     let renewedAt = Date.now();
+    // Three renews per lock time, so one slow renew doesn't lose the lock.
     const renewal = setInterval(() => {
       queue
         .renew(noteId, owner)
@@ -92,9 +87,11 @@ export function createUploadWorker({
           logger.error({ err: error, noteId }, 'upload job lock renew failed');
           // Redis is unreachable. Once a whole lock time has gone by without
           // a renew, the lock has expired anyway.
-          if (Date.now() - renewedAt >= lockMs) lose('upload job lock expired');
+          if (Date.now() - renewedAt >= queue.lockMs) {
+            lose('upload job lock expired');
+          }
         });
-    }, renewEveryMs);
+    }, queue.lockMs / 3);
     try {
       const note = await notes.findById(noteId);
       // Deleted, or already done by an earlier copy of this job.

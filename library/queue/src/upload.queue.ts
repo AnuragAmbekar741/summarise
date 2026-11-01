@@ -58,6 +58,9 @@ export function createUploadQueue(
   const lockKey = (noteId: string) => `${lockPrefix}${noteId}`;
 
   return {
+    // Exposed so the worker renews well within it.
+    lockMs,
+
     async push(noteId: string): Promise<void> {
       const job: UploadJob = { noteId };
       await redis.lPush(key, JSON.stringify(job));

@@ -81,8 +81,6 @@ describe('upload worker', async () => {
       concurrency: options.concurrency ?? 2,
       workerId: options.workerId,
       takeTimeoutSeconds: 0.1,
-      lockMs: keys.lockMs,
-      renewEveryMs: 50,
       recoverEveryMs: 100,
     });
     workers.push(worker);
@@ -290,7 +288,8 @@ describe('upload worker', async () => {
   });
 
   it('tells the job to stop when its lock is taken over', async () => {
-    const keys = testKeys();
+    // A short lock, so it renews (and notices) every 100ms.
+    const keys = testKeys(300);
     const held = heldHandler();
     const note = await uploadedNote();
     await keys.queue.push(note.id);

@@ -12,6 +12,7 @@
     "@summarise/config": "workspace:*",
     "@summarise/logger": "workspace:*",
     "@summarise/queue": "workspace:*",
+    "@summarise/speech-to-text": "workspace:*",
     "@summarise/storage": "workspace:*"
   },
   "devDependencies": {

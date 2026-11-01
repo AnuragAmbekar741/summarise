@@ -369,6 +369,9 @@ importers:
       '@summarise/queue':
         specifier: workspace:*
         version: link:../../library/queue
+      '@summarise/speech-to-text':
+        specifier: workspace:*
+        version: link:../../library/speech-to-text
       '@summarise/storage':
         specifier: workspace:*
         version: link:../../library/storage

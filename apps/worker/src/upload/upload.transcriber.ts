@@ -1,0 +1,163 @@
+import { setTimeout as sleep } from 'node:timers/promises';
+
+import { uploadKey, type ObjectStore } from '@summarise/blob';
+import { logger } from '@summarise/logger';
+import {
+  SpeechToTextError,
+  type SpeechToText,
+} from '@summarise/speech-to-text';
+import type {
+  Note,
+  NoteRepository,
+  TranscriptSegment,
+  TranscriptSegmentRepository,
+} from '@summarise/storage';
+
+import { readPieces, type AudioPiece } from '../audio/audio.pieces';
+
+// Long enough for the slowest job: ffmpeg reuses the URL to reconnect.
+const URL_VALID_SECONDS = 6 * 60 * 60;
+// Audio past this is not transcribed.
+const MAX_AUDIO_MS = 4 * 60 * 60 * 1000;
+// How much of the previous piece's text to send as context.
+const PROMPT_CHARS = 200;
+// Tries per piece when the provider is busy or down, before giving up.
+const MAX_ATTEMPTS = 5;
+// When the provider doesn't say how long to wait: 5s, 10s, 20s, 40s.
+const FIRST_RETRY_MS = 5_000;
+
+type UploadTranscriberDeps = {
+  blob: Pick<ObjectStore, 'presignGet' | 'delete'>;
+  notes: NoteRepository;
+  segments: TranscriptSegmentRepository;
+  speechToText: SpeechToText;
+  // Injected in tests.
+  maxAudioMs?: number;
+  wait?: (ms: number, signal: AbortSignal) => Promise<void>;
+};
+
+// Turns an uploaded file into the note's transcript: each ~30s piece is
+// transcribed and saved as a segment, then the note is marked ready and the
+// file deleted. Pieces saved by an earlier, interrupted run are skipped, so
+// a retried job carries on where the last one stopped.
+export function createUploadTranscriber({
+  blob,
+  notes,
+  segments,
+  speechToText,
+  maxAudioMs = MAX_AUDIO_MS,
+  wait = (ms, signal) => sleep(ms, undefined, { signal }),
+}: UploadTranscriberDeps) {
+  // One piece's text, trying again while the provider is busy. A piece the
+  // provider rejects for good is saved as a gap, as with live recording.
+  async function transcribePiece(
+    note: Note,
+    piece: AudioPiece,
+    previousText: string,
+    signal: AbortSignal,
+  ): Promise<string> {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const { text } = await speechToText.transcribe({
+          audio: piece.audio,
+          mimeType: piece.mimeType,
+          prompt: previousText.slice(-PROMPT_CHARS) || undefined,
+          signal,
+        });
+        await save(note, piece, text, false, signal);
+        return text;
+      } catch (error) {
+        if (!(error instanceof SpeechToTextError)) throw error;
+        if (!error.retryable) {
+          logger.warn(
+            { err: error, noteId: note.id, seq: piece.seq },
+            'piece could not be transcribed',
+          );
+          await save(note, piece, '', true, signal);
+          return '';
+        }
+        if (attempt === MAX_ATTEMPTS) throw error;
+        const ms =
+          error.retryAfterSeconds !== undefined
+            ? error.retryAfterSeconds * 1000
+            : FIRST_RETRY_MS * 2 ** (attempt - 1);
+        await wait(ms, signal);
+      }
+    }
+  }
+
+  async function save(
+    note: Note,
+    piece: AudioPiece,
+    text: string,
+    failed: boolean,
+    signal: AbortSignal,
+  ) {
+    // The lock was lost: another worker may be saving this note now.
+    signal.throwIfAborted();
+    await segments.upsert({
+      noteId: note.id,
+      seq: piece.seq,
+      startMs: piece.startMs,
+      endMs: piece.startMs + piece.durationMs,
+      rawText: text,
+      transcriptionFailed: failed,
+    });
+  }
+
+  return {
+    async transcribe(note: Note, signal: AbortSignal): Promise<void> {
+      const key = uploadKey(note.id);
+      const url = await blob.presignGet(key, URL_VALID_SECONDS);
+      const saved = new Map(
+        (await segments.listByNote(note.id)).map((s) => [s.seq, s]),
+      );
+
+      let previousText = '';
+      let totalChunks = 0;
+      let durationMs = 0;
+      for await (const piece of readPieces(url, { signal })) {
+        if (piece.startMs >= maxAudioMs) {
+          logger.warn(
+            { noteId: note.id, maxAudioMs },
+            'upload too long; transcribed only the start',
+          );
+          break;
+        }
+        const done = saved.get(piece.seq);
+        previousText = done
+          ? textOf(done)
+          : await transcribePiece(note, piece, previousText, signal);
+        totalChunks = piece.seq + 1;
+        durationMs = piece.startMs + piece.durationMs;
+      }
+
+      signal.throwIfAborted();
+      const ready = await notes.finishUpload(note.id, {
+        totalChunks,
+        durationMs,
+      });
+      // Deleted, or another worker finished it first.
+      if (!ready) {
+        logger.warn({ noteId: note.id }, 'upload not marked ready');
+        return;
+      }
+      // The transcript is saved; a file left behind only costs storage.
+      await blob
+        .delete(key)
+        .catch((error: unknown) =>
+          logger.error({ err: error, noteId: note.id }, 'upload not deleted'),
+        );
+      logger.info(
+        { noteId: note.id, totalChunks, durationMs },
+        'upload transcribed',
+      );
+    },
+  };
+}
+
+export type UploadTranscriber = ReturnType<typeof createUploadTranscriber>;
+
+function textOf(segment: TranscriptSegment) {
+  return segment.editedText ?? segment.rawText;
+}

@@ -61,8 +61,10 @@ describe('upload transcriber', async () => {
 
   // `answer(input, call)` stands in for Groq: return the text, or throw.
   function setUp(
-    answer: (input: TranscribeInput, call: number) => string = (_, call) =>
-      `text ${call}`,
+    answer: (
+      input: TranscribeInput,
+      call: number,
+    ) => string | Promise<string> = (_, call) => `text ${call}`,
     options: { maxAudioMs?: number } = {},
   ) {
     const calls: TranscribeInput[] = [];
@@ -71,7 +73,7 @@ describe('upload transcriber', async () => {
     const speechToText: SpeechToText = {
       async transcribe(input) {
         calls.push(input);
-        return { text: answer(input, calls.length - 1) };
+        return { text: await answer(input, calls.length - 1) };
       },
     };
     const transcriber = createUploadTranscriber({
@@ -292,8 +294,9 @@ describe('upload transcriber', async () => {
 
   it('fails when the note is deleted part way', async () => {
     const note = await uploadedNote();
-    const { transcriber } = setUp((_, call) => {
-      if (call === 1) void notes.delete(note.id);
+    // Deleted (and gone) before the second piece is saved.
+    const { transcriber } = setUp(async (_, call) => {
+      if (call === 1) await notes.delete(note.id);
       return `text ${call}`;
     });
 

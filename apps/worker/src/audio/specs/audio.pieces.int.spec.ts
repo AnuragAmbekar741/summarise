@@ -224,6 +224,21 @@ describe('readPieces', () => {
     expect(samples).toEqual([1, 2, 3]);
   });
 
+  it("runs ffmpeg apart from the worker's signals", async () => {
+    // A Ctrl-C or deploy signal goes to the worker's whole process group;
+    // ffmpeg must not be in it.
+    const path = file('long.mp3');
+    const pieces = readPieces(path);
+    await pieces.next();
+    const { stdout: pid } = await run('pgrep', ['-f', path]);
+    const group = async (id: string) =>
+      (await run('ps', ['-o', 'pgid=', '-p', id])).stdout.trim();
+
+    expect(await group(pid.trim())).not.toBe(await group(String(process.pid)));
+
+    await pieces.return(undefined);
+  });
+
   it('stops ffmpeg when the caller stops reading', async () => {
     const path = file('long.mp3');
     const pieces = readPieces(path);

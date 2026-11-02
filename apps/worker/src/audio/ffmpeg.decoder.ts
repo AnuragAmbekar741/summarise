@@ -53,6 +53,11 @@ export async function* decodeAudio(
   signal?.throwIfAborted();
   const ffmpeg = spawn(ffmpegPath, ffmpegArgs(source, stallTimeoutMs), {
     stdio: ['ignore', 'pipe', 'pipe'],
+    // Its own process group, so a Ctrl-C or deploy signal meant for the
+    // worker doesn't kill it mid-job: that would fail the job instead of
+    // letting the worker stop it (or leave it to resume). It is stopped
+    // here, and exits by itself if the worker dies (its output pipe breaks).
+    detached: true,
   });
 
   // Always read the error output: if nobody does, ffmpeg stops once its

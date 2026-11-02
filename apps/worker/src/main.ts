@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { promisify } from 'node:util';
 
 import { createS3BlobStore } from '@summarise/blob';
@@ -72,15 +73,25 @@ const worker = createUploadWorker({
 });
 await worker.start();
 
-// On a deploy or Ctrl-C: finish the running jobs, then close up. A second
-// signal exits at once; those jobs are picked up again on the next start.
+// On a deploy or Ctrl-C: let running jobs finish, but only for so long; a
+// lecture can take minutes, and the platform would kill us anyway. Jobs
+// still running are picked up again on the next start, from the pieces
+// already saved. A second signal exits at once.
+const STOP_WAIT_MS = 20_000;
 let stopping = false;
 async function shutdown(signal: NodeJS.Signals) {
   if (stopping) process.exit(1);
   stopping = true;
   logger.info({ signal }, 'worker stopping');
   clearInterval(sweepTimer);
-  await worker.stop();
+  const stopped = await Promise.race([
+    worker.stop().then(() => true),
+    sleep(STOP_WAIT_MS).then(() => false),
+  ]);
+  if (!stopped) {
+    logger.warn('jobs still running; they carry on after the next start');
+    process.exit(0);
+  }
   await redis.close();
   await db.$client.end();
   process.exit(0);

@@ -8,6 +8,10 @@ import {
 const GROQ_TRANSCRIPTIONS_URL =
   'https://api.groq.com/openai/v1/audio/transcriptions';
 const MODEL = 'whisper-large-v3-turbo';
+// Errors about our account, not the audio: a bad or revoked key (401, 403)
+// or a rate limit (429). Retrying, once fixed, can still succeed; treating
+// them as bad audio would throw away every chunk sent meanwhile.
+const RETRYABLE_STATUSES = new Set([401, 403, 429]);
 
 type GroqOptions = {
   apiKey: string;
@@ -20,7 +24,7 @@ export function createGroqSpeechToText({
   fetch: fetchFn = fetch,
 }: GroqOptions): SpeechToText {
   return {
-    async transcribe({ audio, mimeType, prompt }: TranscribeInput) {
+    async transcribe({ audio, mimeType, prompt, signal }: TranscribeInput) {
       const extension = audioFileExtension(mimeType);
       if (!extension) {
         throw new SpeechToTextError(`unsupported audio type: ${mimeType}`, {
@@ -45,8 +49,11 @@ export function createGroqSpeechToText({
           method: 'POST',
           headers: { Authorization: `Bearer ${apiKey}` },
           body: form,
+          signal,
         });
       } catch (error) {
+        // Cancelled by the caller: not a Groq problem.
+        signal?.throwIfAborted();
         throw new SpeechToTextError('could not reach Groq', {
           retryable: true,
           cause: error,
@@ -58,7 +65,8 @@ export function createGroqSpeechToText({
         throw new SpeechToTextError(
           `Groq returned ${response.status}: ${detail.slice(0, 300)}`,
           {
-            retryable: response.status === 429 || response.status >= 500,
+            retryable:
+              RETRYABLE_STATUSES.has(response.status) || response.status >= 500,
             retryAfterSeconds: parseRetryAfter(
               response.headers.get('retry-after'),
             ),

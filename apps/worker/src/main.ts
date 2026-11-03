@@ -1,14 +1,33 @@
+import { execFile } from 'node:child_process';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { promisify } from 'node:util';
+
 import { createS3BlobStore } from '@summarise/blob';
 import { config } from '@summarise/config';
 import { logger } from '@summarise/logger';
-import { createRedisClient } from '@summarise/queue';
-import { createDatabase, createNoteRepository } from '@summarise/storage';
+import { createRedisClient, createUploadQueue } from '@summarise/queue';
+import { createGroqSpeechToText } from '@summarise/speech-to-text';
+import {
+  createDatabase,
+  createNoteRepository,
+  createTranscriptSegmentRepository,
+} from '@summarise/storage';
 
 import { createUploadSweeper } from './upload/upload.sweeper';
+import { createUploadTranscriber } from './upload/upload.transcriber';
+import { createUploadWorker } from './upload/upload.worker';
 
 const SWEEP_EVERY_MS = 4 * 60 * 60 * 1000;
 
-// The open Redis connection keeps the process running. Jobs get consumed here later.
+// Every upload needs ffmpeg; without it, refuse to start rather than fail
+// each job.
+try {
+  await promisify(execFile)('ffmpeg', ['-version']);
+} catch (error) {
+  logger.fatal({ err: error }, 'ffmpeg is not installed');
+  process.exit(1);
+}
+
 const redis = await createRedisClient(config.REDIS_URL);
 const db = createDatabase(config.DATABASE_URL);
 const blob = createS3BlobStore({
@@ -18,10 +37,11 @@ const blob = createS3BlobStore({
   secretAccessKey: config.AWS_SECRET_ACCESS_KEY,
   bucket: config.UPLOADS_BUCKET,
 });
+const notes = createNoteRepository(db);
 logger.info({ redis: await redis.ping() }, 'worker started');
 
 // Once at start, then every 4 hours. A failed sweep is retried on the next one.
-const sweeper = createUploadSweeper({ notes: createNoteRepository(db), blob });
+const sweeper = createUploadSweeper({ notes, blob });
 async function sweep() {
   try {
     await sweeper.sweep();
@@ -30,4 +50,51 @@ async function sweep() {
   }
 }
 void sweep();
-setInterval(sweep, SWEEP_EVERY_MS);
+const sweepTimer = setInterval(sweep, SWEEP_EVERY_MS);
+
+const transcriber = createUploadTranscriber({
+  blob,
+  notes,
+  segments: createTranscriptSegmentRepository(db),
+  speechToText: createGroqSpeechToText({ apiKey: config.GROQ_API_KEY }),
+});
+const worker = createUploadWorker({
+  // Each loop waits on its own connection.
+  async openQueue() {
+    const connection = await createRedisClient(config.REDIS_URL);
+    return {
+      queue: createUploadQueue(connection),
+      close: async () => void (await connection.close()),
+    };
+  },
+  notes,
+  handle: (note, signal) => transcriber.transcribe(note, signal),
+  concurrency: config.WORKER_CONCURRENCY,
+});
+await worker.start();
+
+// On a deploy or Ctrl-C: let running jobs finish, but only for so long; a
+// lecture can take minutes, and the platform would kill us anyway. Jobs
+// still running are picked up again on the next start, from the pieces
+// already saved. A second signal exits at once.
+const STOP_WAIT_MS = 20_000;
+let stopping = false;
+async function shutdown(signal: NodeJS.Signals) {
+  if (stopping) process.exit(1);
+  stopping = true;
+  logger.info({ signal }, 'worker stopping');
+  clearInterval(sweepTimer);
+  const stopped = await Promise.race([
+    worker.stop().then(() => true),
+    sleep(STOP_WAIT_MS).then(() => false),
+  ]);
+  if (!stopped) {
+    logger.warn('jobs still running; they carry on after the next start');
+    process.exit(0);
+  }
+  await redis.close();
+  await db.$client.end();
+  process.exit(0);
+}
+process.on('SIGINT', (signal) => void shutdown(signal));
+process.on('SIGTERM', (signal) => void shutdown(signal));

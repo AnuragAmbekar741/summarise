@@ -59,9 +59,9 @@ function expectWellFormed(pieces: PlannedPiece[], input: Int16Array) {
   let next = 0;
   pieces.forEach((piece, index) => {
     expect(piece.startSample).toBe(next);
-    expect(piece.samples).toEqual(
-      input.subarray(next, next + piece.samples.length),
-    );
+    // Byte for byte; toEqual on ~500k samples is too slow.
+    const expected = input.subarray(next, next + piece.samples.length);
+    expect(bytes(piece.samples).equals(bytes(expected))).toBe(true);
     next += piece.samples.length;
     if (index < pieces.length - 1) {
       expect(msOf(piece.samples.length)).toBeGreaterThanOrEqual(25_000);
@@ -69,6 +69,10 @@ function expectWellFormed(pieces: PlannedPiece[], input: Int16Array) {
     }
   });
   expect(next).toBe(input.length);
+}
+
+function bytes(samples: Int16Array) {
+  return Buffer.from(samples.buffer, samples.byteOffset, samples.byteLength);
 }
 
 // Where each cut falls, in seconds from the start.

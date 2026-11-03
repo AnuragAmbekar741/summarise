@@ -52,6 +52,8 @@ describe('readPieces', () => {
   }, 60_000);
 
   afterAll(async () => {
+    // Including the stalled connection, which would otherwise stay open.
+    server?.closeAllConnections();
     server?.close();
     await rm(dir, { recursive: true, force: true });
   });
@@ -164,6 +166,19 @@ describe('readPieces', () => {
     expect((error as AudioError).message).toContain('Stream ends prematurely');
   }, 60_000);
 
+  // Slow: after the stall, ffmpeg tries to reconnect for about 30s.
+  it('fails, worth retrying, when the download stalls', async () => {
+    const pieces = readPieces(`${baseUrl}/stall/long.mp3`, {
+      stallTimeoutMs: 1_000,
+    });
+    const error = await (async () => {
+      for await (const piece of pieces) void piece;
+    })().catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(AudioError);
+    expect((error as AudioError).retryable).toBe(true);
+  }, 60_000);
+
   it('keeps the URL signature out of the error', async () => {
     const url = `${baseUrl}/missing.mp3?X-Amz-Signature=secret-signature`;
 
@@ -207,6 +222,21 @@ describe('readPieces', () => {
     }
 
     expect(samples).toEqual([1, 2, 3]);
+  });
+
+  it("runs ffmpeg apart from the worker's signals", async () => {
+    // A Ctrl-C or deploy signal goes to the worker's whole process group;
+    // ffmpeg must not be in it.
+    const path = file('long.mp3');
+    const pieces = readPieces(path);
+    await pieces.next();
+    const { stdout: pid } = await run('pgrep', ['-f', path]);
+    const group = async (id: string) =>
+      (await run('ps', ['-o', 'pgid=', '-p', id])).stdout.trim();
+
+    expect(await group(pid.trim())).not.toBe(await group(String(process.pid)));
+
+    await pieces.return(undefined);
   });
 
   it('stops ffmpeg when the caller stops reading', async () => {
@@ -260,7 +290,8 @@ async function expectStopped(path: string) {
 
 // Serves files from `dir` with byte ranges, like the bucket does, ignoring
 // any query. `/server-error` answers 500. `/cut-off/<name>` drops the
-// connection after a third of the file and answers 500 to the reconnect.
+// connection after a third of the file, and `/stall/<name>` goes silent
+// after 64 KB without closing it; both answer 500 to the reconnect.
 function serve(dir: string): Promise<Server> {
   const server = createServer(async (request, response) => {
     let name = (request.url ?? '/').slice(1).split('?')[0]!;
@@ -268,13 +299,27 @@ function serve(dir: string): Promise<Server> {
       response.writeHead(500).end();
       return;
     }
-    const cutOff = name.startsWith('cut-off/');
-    if (cutOff) {
+    const mode = /^(cut-off|stall)\//.exec(name)?.[1];
+    if (mode) {
       if (request.headers.range && !/bytes=0-/.test(request.headers.range)) {
         response.writeHead(500).end();
         return;
       }
-      name = name.slice('cut-off/'.length);
+      name = name.slice(mode.length + 1);
+    }
+    const cutOff = mode === 'cut-off';
+    if (mode === 'stall') {
+      const size = (await stat(join(dir, name))).size;
+      // Byte ranges, so the reconnect asks to resume rather than restart.
+      response.writeHead(200, {
+        'Accept-Ranges': 'bytes',
+        'Content-Length': size,
+      });
+      createReadStream(join(dir, name), { start: 0, end: 65_535 }).pipe(
+        response,
+        { end: false },
+      );
+      return;
     }
     const path = join(dir, name);
     const size = await stat(path).then(

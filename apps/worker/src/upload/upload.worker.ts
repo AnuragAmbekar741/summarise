@@ -63,7 +63,9 @@ export function createUploadWorker({
   let checkTimer: NodeJS.Timeout | undefined;
 
   function pause() {
-    if (paused) return;
+    // Stopping: the jobs are handed back anyway, and a check timer started
+    // now would outlive the worker.
+    if (paused || stopping) return;
     let resume!: () => void;
     const until = new Promise<void>((resolve) => (resume = resolve));
     paused = { until, resume };

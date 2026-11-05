@@ -474,6 +474,41 @@ describe('upload worker', async () => {
       await vi.waitFor(() => expect(handle).toHaveBeenCalledOnce());
     });
 
+    it('hands the job back, but does not pause, when it trips while stopping', async () => {
+      const keys = testKeys();
+      const note = await uploadedNote();
+      let checks = 0;
+      let running = false;
+      let fail!: () => void;
+      const failing = new Promise<void>((resolve) => (fail = resolve));
+      await keys.queue.push(note.id);
+      const worker = startWorker(
+        keys,
+        async () => {
+          running = true;
+          await failing;
+          throw SETUP_ERROR;
+        },
+        {
+          setup: () => {
+            checks += 1;
+            return 'ok';
+          },
+        },
+      );
+      await worker.start();
+      await vi.waitFor(() => expect(running).toBe(true));
+
+      const stopping = worker.stop();
+      fail();
+      await stopping;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+
+      // Only the startup check: no check timer was left running.
+      expect(checks).toBe(1);
+      expect(await listLengths(keys)).toEqual({ pending: 1, active: 0 });
+    });
+
     it('stops promptly while paused', async () => {
       const keys = testKeys();
       const worker = startWorker(keys, async () => {}, {

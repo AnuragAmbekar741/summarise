@@ -115,6 +115,24 @@ describe('groq speech-to-text', () => {
     }
   });
 
+  it('marks a retired model as a setup error, by its error code', async () => {
+    const { stt } = groqWith(
+      Response.json(
+        {
+          error: {
+            message: 'The model has been decommissioned',
+            code: 'model_decommissioned',
+          },
+        },
+        { status: 400 },
+      ),
+    );
+
+    await expect(
+      stt.transcribe({ audio, mimeType: 'audio/webm' }),
+    ).rejects.toMatchObject({ retryable: true, setupError: true });
+  });
+
   it('does not mark a rate limit or outage as a setup error', async () => {
     for (const status of [429, 500]) {
       const { stt } = groqWith(new Response('busy', { status }));
@@ -175,6 +193,31 @@ describe('checkGroqSetup', () => {
     const { check } = checkWith(Response.json({ data: [{ id: 'other' }] }));
 
     expect(await check()).toBe('rejected');
+  });
+
+  it('throws for a reply that is not a list of models, since that proves nothing', async () => {
+    for (const reply of [
+      new Response('<html>Sign in to the Wi-Fi</html>', { status: 200 }),
+      Response.json({ unexpected: true }),
+    ]) {
+      const { check } = checkWith(reply);
+      await expect(check()).rejects.toBeInstanceOf(SpeechToTextError);
+    }
+  });
+
+  it('gives up on a check that hangs', async () => {
+    const fetch = vi.fn(
+      (_url: URL | RequestInfo, init?: RequestInit) =>
+        new Promise<Response>((_, reject) =>
+          init?.signal?.addEventListener('abort', () =>
+            reject(init.signal!.reason as Error),
+          ),
+        ),
+    );
+
+    await expect(
+      checkGroqSetup({ apiKey: 'key', fetch, timeoutMs: 50 }),
+    ).rejects.toBeInstanceOf(SpeechToTextError);
   });
 
   it('throws when Groq is down or unreachable, since that proves nothing', async () => {

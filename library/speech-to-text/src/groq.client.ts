@@ -7,11 +7,15 @@ import {
 
 const GROQ_TRANSCRIPTIONS_URL =
   'https://api.groq.com/openai/v1/audio/transcriptions';
+const GROQ_MODELS_URL = 'https://api.groq.com/openai/v1/models';
 const MODEL = 'whisper-large-v3-turbo';
-// Errors about our account, not the audio: a bad or revoked key (401, 403)
-// or a rate limit (429). Retrying, once fixed, can still succeed; treating
-// them as bad audio would throw away every chunk sent meanwhile.
-const RETRYABLE_STATUSES = new Set([401, 403, 429]);
+// Errors about our setup, not the audio: a bad or revoked key (401, 403) or
+// a model that doesn't exist (404). Every request fails the same way until
+// that is fixed; treating them as bad audio would throw away every chunk
+// sent meanwhile.
+const SETUP_STATUSES = new Set([401, 403, 404]);
+// Worth trying again: our setup once fixed, or a rate limit.
+const RETRYABLE_STATUSES = new Set([...SETUP_STATUSES, 429]);
 
 type GroqOptions = {
   apiKey: string;
@@ -70,6 +74,7 @@ export function createGroqSpeechToText({
             retryAfterSeconds: parseRetryAfter(
               response.headers.get('retry-after'),
             ),
+            setupError: SETUP_STATUSES.has(response.status),
           },
         );
       }
@@ -93,6 +98,36 @@ export function createGroqSpeechToText({
       return { text: body.text.trim() };
     },
   };
+}
+
+// Whether Groq accepts our setup: the key works and our model is listed.
+// Lists the models, which sends no audio and costs nothing. Throws when
+// Groq can't be reached or errors, since that says nothing either way.
+export async function checkGroqSetup({
+  apiKey,
+  fetch: fetchFn = fetch,
+}: GroqOptions): Promise<'ok' | 'rejected'> {
+  let response: Response;
+  try {
+    response = await fetchFn(GROQ_MODELS_URL, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+  } catch (error) {
+    throw new SpeechToTextError('could not reach Groq', {
+      retryable: true,
+      cause: error,
+    });
+  }
+  if (SETUP_STATUSES.has(response.status)) return 'rejected';
+  if (!response.ok) {
+    throw new SpeechToTextError(`Groq returned ${response.status}`, {
+      retryable: true,
+    });
+  }
+  const body = (await response.json().catch(() => ({}))) as {
+    data?: { id?: unknown }[];
+  };
+  return body.data?.some((model) => model.id === MODEL) ? 'ok' : 'rejected';
 }
 
 function parseRetryAfter(value: string | null) {

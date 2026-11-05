@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { audioFileExtension } from '../audio.utils';
-import { createGroqSpeechToText } from '../groq.client';
+import { checkGroqSetup, createGroqSpeechToText } from '../groq.client';
 import { SpeechToTextError } from '../speech-to-text.types';
 
 const audio = Buffer.from('fake audio');
@@ -106,12 +106,21 @@ describe('groq speech-to-text', () => {
     }
   });
 
-  it('marks a bad or revoked key (401, 403) as retryable', async () => {
-    for (const status of [401, 403]) {
-      const { stt } = groqWith(new Response('invalid key', { status }));
+  it('marks a bad key (401, 403) or model (404) as a retryable setup error', async () => {
+    for (const status of [401, 403, 404]) {
+      const { stt } = groqWith(new Response('rejected', { status }));
       await expect(
         stt.transcribe({ audio, mimeType: 'audio/webm' }),
-      ).rejects.toMatchObject({ retryable: true });
+      ).rejects.toMatchObject({ retryable: true, setupError: true });
+    }
+  });
+
+  it('does not mark a rate limit or outage as a setup error', async () => {
+    for (const status of [429, 500]) {
+      const { stt } = groqWith(new Response('busy', { status }));
+      await expect(
+        stt.transcribe({ audio, mimeType: 'audio/webm' }),
+      ).rejects.toMatchObject({ retryable: true, setupError: false });
     }
   });
 
@@ -120,7 +129,7 @@ describe('groq speech-to-text', () => {
 
     await expect(
       stt.transcribe({ audio, mimeType: 'audio/webm' }),
-    ).rejects.toMatchObject({ retryable: false });
+    ).rejects.toMatchObject({ retryable: false, setupError: false });
   });
 
   it('rejects an unsupported audio type without calling Groq', async () => {
@@ -130,6 +139,52 @@ describe('groq speech-to-text', () => {
       stt.transcribe({ audio, mimeType: 'video/quicktime' }),
     ).rejects.toMatchObject({ retryable: false });
     expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('checkGroqSetup', () => {
+  function checkWith(response: Response | Error) {
+    const fetch = vi.fn(async () => {
+      if (response instanceof Error) throw response;
+      return response;
+    });
+    return { fetch, check: () => checkGroqSetup({ apiKey: 'key', fetch }) };
+  }
+
+  it('is ok when the key works and our model is listed', async () => {
+    const { fetch, check } = checkWith(
+      Response.json({
+        data: [{ id: 'other' }, { id: 'whisper-large-v3-turbo' }],
+      }),
+    );
+
+    expect(await check()).toBe('ok');
+    const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://api.groq.com/openai/v1/models');
+    expect(init.headers).toEqual({ Authorization: 'Bearer key' });
+  });
+
+  it('is rejected for a bad key', async () => {
+    for (const status of [401, 403]) {
+      const { check } = checkWith(new Response('invalid key', { status }));
+      expect(await check()).toBe('rejected');
+    }
+  });
+
+  it('is rejected when our model is not listed', async () => {
+    const { check } = checkWith(Response.json({ data: [{ id: 'other' }] }));
+
+    expect(await check()).toBe('rejected');
+  });
+
+  it('throws when Groq is down or unreachable, since that proves nothing', async () => {
+    for (const failure of [
+      new Response('oops', { status: 503 }),
+      new TypeError('fetch failed'),
+    ]) {
+      const { check } = checkWith(failure);
+      await expect(check()).rejects.toBeInstanceOf(SpeechToTextError);
+    }
   });
 });
 

@@ -17,12 +17,16 @@ export class SpeechToTextError extends Error {
   // again later. False for bad input.
   readonly retryable: boolean;
   readonly retryAfterSeconds?: number;
+  // The provider rejected our setup (the API key, or the model), not this
+  // audio: every request will fail the same way until that is fixed.
+  readonly setupError: boolean;
 
   constructor(
     message: string,
     options: {
       retryable: boolean;
       retryAfterSeconds?: number;
+      setupError?: boolean;
       cause?: unknown;
     },
   ) {
@@ -30,5 +34,6 @@ export class SpeechToTextError extends Error {
     this.name = 'SpeechToTextError';
     this.retryable = options.retryable;
     this.retryAfterSeconds = options.retryAfterSeconds;
+    this.setupError = options.setupError ?? false;
   }
 }

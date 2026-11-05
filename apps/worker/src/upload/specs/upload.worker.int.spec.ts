@@ -253,6 +253,25 @@ describe('upload worker', async () => {
     );
   });
 
+  it('puts a job back at the front of the line, only while it owns the lock', async () => {
+    const keys = testKeys();
+    const [first, second] = await Promise.all([uploadedNote(), uploadedNote()]);
+    await keys.queue.push(first.id);
+    await keys.queue.push(second.id);
+    const job = (await keys.queue.take(1))!;
+    await keys.queue.lock(job.noteId, 'me');
+
+    // Another worker's lock: left alone.
+    expect(await keys.queue.putBack(job, 'someone-else')).toBe(false);
+    expect(await listLengths(keys)).toEqual({ pending: 1, active: 1 });
+
+    expect(await keys.queue.putBack(job, 'me')).toBe(true);
+    expect(await listLengths(keys)).toEqual({ pending: 2, active: 0 });
+    expect(await redis.exists(`${keys.lockPrefix}${job.noteId}`)).toBe(0);
+    // Taken again before the job that was behind it.
+    expect((await keys.queue.take(1))?.noteId).toBe(first.id);
+  });
+
   it('leaves a locked active job alone until its lock expires', async () => {
     const keys = testKeys(300);
     const note = await uploadedNote();

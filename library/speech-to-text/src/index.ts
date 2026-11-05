@@ -1,4 +1,4 @@
-export { createGroqSpeechToText } from './groq.client';
+export { checkGroqSetup, createGroqSpeechToText } from './groq.client';
 export {
   SpeechToTextError,
   type SpeechToText,

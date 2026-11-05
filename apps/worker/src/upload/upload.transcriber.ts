@@ -30,6 +30,10 @@ const FIRST_RETRY_MS = 5_000;
 const MAX_WAIT_MS = 2 * 60 * 1000;
 // Never retry straight away, even when told to.
 const MIN_WAIT_MS = 1_000;
+// Waits before trying again after the provider rejects our setup (the key
+// or the model). Still rejected after these, the error is thrown, and the
+// worker pauses every job until the setup works.
+const SETUP_RETRY_MS = [5_000, 10_000, 15_000];
 
 type UploadTranscriberDeps = {
   blob: Pick<ObjectStore, 'presignGet' | 'delete'>;
@@ -61,7 +65,10 @@ export function createUploadTranscriber({
     previousText: string,
     signal: AbortSignal,
   ): Promise<string> {
-    for (let attempt = 1; ; attempt++) {
+    // Counted apart, so setup retries don't use up the busy ones.
+    let setupFailures = 0;
+    let busyFailures = 0;
+    for (;;) {
       try {
         const { text } = await speechToText.transcribe({
           audio: piece.audio,
@@ -73,6 +80,12 @@ export function createUploadTranscriber({
         return text;
       } catch (error) {
         if (!(error instanceof SpeechToTextError)) throw error;
+        if (error.setupError) {
+          const ms = SETUP_RETRY_MS[setupFailures++];
+          if (ms === undefined) throw error;
+          await wait(ms, signal);
+          continue;
+        }
         if (!error.retryable) {
           logger.warn(
             { err: error, noteId: note.id, seq: piece.seq },
@@ -81,11 +94,12 @@ export function createUploadTranscriber({
           await save(note, piece, '', true, signal);
           return '';
         }
-        if (attempt === MAX_ATTEMPTS) throw error;
+        busyFailures++;
+        if (busyFailures === MAX_ATTEMPTS) throw error;
         const ms =
           error.retryAfterSeconds !== undefined
             ? error.retryAfterSeconds * 1000
-            : FIRST_RETRY_MS * 2 ** (attempt - 1);
+            : FIRST_RETRY_MS * 2 ** (busyFailures - 1);
         if (ms > MAX_WAIT_MS) throw error;
         await wait(Math.max(ms, MIN_WAIT_MS), signal);
       }

@@ -12,6 +12,9 @@ import { createUploadWorker, type UploadWorker } from '../upload.worker';
 
 // Runs against the real Postgres and Redis from .env. Every test uses Redis
 // keys of its own, so the real worker never sees these jobs.
+// What a handler throws when the provider rejects our setup.
+const SETUP_ERROR = new Error('invalid API key');
+
 describe('upload worker', async () => {
   const db = createDatabase(config.DATABASE_URL);
   const notes = createNoteRepository(db);
@@ -54,10 +57,13 @@ describe('upload worker', async () => {
     keys: ReturnType<typeof testKeys>,
     handle: (note: Note, signal: AbortSignal) => Promise<void>,
     // `renewFails`: every renew throws, as when Redis is unreachable.
+    // `setup`: what the provider setup check answers; a function, so a test
+    // can change it. A thrown error counts as a setup error.
     options: {
       concurrency?: number;
       workerId?: string;
       renewFails?: boolean;
+      setup?: () => 'ok' | 'rejected';
     } = {},
   ) {
     const worker = createUploadWorker({
@@ -82,6 +88,9 @@ describe('upload worker', async () => {
       workerId: options.workerId,
       takeTimeoutSeconds: 0.1,
       recoverEveryMs: 100,
+      isSetupError: (error) => error === SETUP_ERROR,
+      checkSetup: options.setup && (async () => options.setup!()),
+      checkEveryMs: 100,
     });
     workers.push(worker);
     return worker;
@@ -360,6 +369,123 @@ describe('upload worker', async () => {
 
     await expect(worker.start()).rejects.toThrow('redis unreachable');
     expect(closes).toBe(2);
+  });
+
+  describe('when the provider rejects our setup', () => {
+    it('stops every running job, hands them back, and takes no more', async () => {
+      const keys = testKeys();
+      const [failing, other] = await Promise.all([
+        uploadedNote(),
+        uploadedNote(),
+      ]);
+      const stopped: unknown[] = [];
+      let otherRunning = false;
+      // Fine at startup; rejected from the moment the key goes bad.
+      let setup: 'ok' | 'rejected' = 'ok';
+      await keys.queue.push(other.id);
+      await keys.queue.push(failing.id);
+
+      await startWorker(
+        keys,
+        async (note, signal) => {
+          if (note.id === other.id) {
+            otherRunning = true;
+            // Runs until told to stop.
+            await new Promise((_, reject) =>
+              signal.addEventListener('abort', () => {
+                stopped.push(signal.reason);
+                reject(signal.reason as Error);
+              }),
+            );
+          }
+          await vi.waitFor(() => expect(otherRunning).toBe(true));
+          setup = 'rejected';
+          throw SETUP_ERROR;
+        },
+        { setup: () => setup },
+      ).start();
+
+      await vi.waitFor(async () =>
+        expect(await listLengths(keys)).toEqual({ pending: 2, active: 0 }),
+      );
+      expect(stopped).toHaveLength(1);
+      expect(await redis.keys(`${keys.lockPrefix}*`)).toEqual([]);
+      // Paused: several checks go by, and nothing is taken.
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      expect(await listLengths(keys)).toEqual({ pending: 2, active: 0 });
+    });
+
+    it('carries on once the setup works again', async () => {
+      const keys = testKeys();
+      const note = await uploadedNote();
+      let setup: 'ok' | 'rejected' = 'rejected';
+      const handled: string[] = [];
+      await keys.queue.push(note.id);
+
+      await startWorker(
+        keys,
+        async (n) => {
+          if (setup === 'rejected') throw SETUP_ERROR;
+          handled.push(n.id);
+        },
+        { setup: () => setup },
+      ).start();
+      await vi.waitFor(async () =>
+        expect(await listLengths(keys)).toEqual({ pending: 1, active: 0 }),
+      );
+
+      setup = 'ok';
+
+      await vi.waitFor(() => expect(handled).toEqual([note.id]));
+      await vi.waitFor(async () =>
+        expect(await listLengths(keys)).toEqual({ pending: 0, active: 0 }),
+      );
+    });
+
+    it('starts paused, taking no job, when the setup is rejected', async () => {
+      const keys = testKeys();
+      const note = await uploadedNote();
+      let setup: 'ok' | 'rejected' = 'rejected';
+      const handle = vi.fn(async () => {});
+      await keys.queue.push(note.id);
+
+      await startWorker(keys, handle, { setup: () => setup }).start();
+      await new Promise((resolve) => setTimeout(resolve, 400));
+
+      expect(handle).not.toHaveBeenCalled();
+      expect(await listLengths(keys)).toEqual({ pending: 1, active: 0 });
+
+      setup = 'ok';
+      await vi.waitFor(() => expect(handle).toHaveBeenCalledOnce());
+    });
+
+    it('starts as usual when the setup check cannot tell', async () => {
+      const keys = testKeys();
+      const note = await uploadedNote();
+      const handle = vi.fn(async () => {});
+      await keys.queue.push(note.id);
+
+      await startWorker(keys, handle, {
+        setup: () => {
+          throw new Error('network down');
+        },
+      }).start();
+
+      await vi.waitFor(() => expect(handle).toHaveBeenCalledOnce());
+    });
+
+    it('stops promptly while paused', async () => {
+      const keys = testKeys();
+      const worker = startWorker(keys, async () => {}, {
+        setup: () => 'rejected',
+      });
+      await worker.start();
+
+      const started = Date.now();
+      await worker.stop();
+
+      expect(Date.now() - started).toBeLessThan(1_000);
+    });
   });
 
   it('finishes running jobs before stopping', async () => {

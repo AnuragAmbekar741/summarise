@@ -65,8 +65,10 @@ export function createUploadTranscriber({
     previousText: string,
     signal: AbortSignal,
   ): Promise<string> {
+    // Counted apart, so setup retries don't use up the busy ones.
     let setupFailures = 0;
-    for (let attempt = 1; ; attempt++) {
+    let busyFailures = 0;
+    for (;;) {
       try {
         const { text } = await speechToText.transcribe({
           audio: piece.audio,
@@ -92,11 +94,12 @@ export function createUploadTranscriber({
           await save(note, piece, '', true, signal);
           return '';
         }
-        if (attempt === MAX_ATTEMPTS) throw error;
+        busyFailures++;
+        if (busyFailures === MAX_ATTEMPTS) throw error;
         const ms =
           error.retryAfterSeconds !== undefined
             ? error.retryAfterSeconds * 1000
-            : FIRST_RETRY_MS * 2 ** (attempt - 1);
+            : FIRST_RETRY_MS * 2 ** (busyFailures - 1);
         if (ms > MAX_WAIT_MS) throw error;
         await wait(Math.max(ms, MIN_WAIT_MS), signal);
       }

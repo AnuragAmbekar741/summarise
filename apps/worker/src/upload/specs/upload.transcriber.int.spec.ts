@@ -225,6 +225,28 @@ describe('upload transcriber', async () => {
     expect((await notes.findById(note.id))?.status).toBe('ready');
   });
 
+  it('keeps all its busy retries after setup retries', async () => {
+    const note = await uploadedNote();
+    // 3 setup errors, then 4 busy ones: within both limits, so it succeeds.
+    const { transcriber, waits } = setUp((_, call) => {
+      if (call < 3) {
+        throw new SpeechToTextError('invalid key', {
+          retryable: true,
+          setupError: true,
+        });
+      }
+      if (call < 7) throw new SpeechToTextError('busy', { retryable: true });
+      return `text ${call}`;
+    });
+
+    await transcriber.transcribe(note, signal());
+
+    expect(waits).toEqual([
+      5_000, 10_000, 15_000, 5_000, 10_000, 20_000, 40_000,
+    ]);
+    expect((await notes.findById(note.id))?.status).toBe('ready');
+  });
+
   it('gives up at once when asked to wait more than 2 minutes', async () => {
     const note = await uploadedNote();
     const { transcriber, calls, waits } = setUp(() => {

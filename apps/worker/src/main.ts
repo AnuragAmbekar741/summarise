@@ -6,7 +6,11 @@ import { createS3BlobStore } from '@summarise/blob';
 import { config } from '@summarise/config';
 import { logger } from '@summarise/logger';
 import { createRedisClient, createUploadQueue } from '@summarise/queue';
-import { createGroqSpeechToText } from '@summarise/speech-to-text';
+import {
+  checkGroqSetup,
+  createGroqSpeechToText,
+  SpeechToTextError,
+} from '@summarise/speech-to-text';
 import {
   createDatabase,
   createNoteRepository,
@@ -70,6 +74,11 @@ const worker = createUploadWorker({
   notes,
   handle: (note, signal) => transcriber.transcribe(note, signal),
   concurrency: config.WORKER_CONCURRENCY,
+  // A bad API key or model pauses every job, instead of failing each one,
+  // until Groq accepts the setup again.
+  isSetupError: (error) =>
+    error instanceof SpeechToTextError && error.setupError,
+  checkSetup: () => checkGroqSetup({ apiKey: config.GROQ_API_KEY }),
 });
 await worker.start();
 

@@ -186,6 +186,45 @@ describe('upload transcriber', async () => {
     expect((await notes.findById(note.id))?.status).toBe('ready');
   });
 
+  it('tries a rejected setup again after 5s, 10s and 15s, then gives up', async () => {
+    const note = await uploadedNote();
+    const { transcriber, calls, waits, deleted } = setUp(() => {
+      throw new SpeechToTextError('invalid key', {
+        retryable: true,
+        setupError: true,
+      });
+    });
+
+    const error = await transcriber
+      .transcribe(note, signal())
+      .catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ setupError: true });
+    expect(calls).toHaveLength(4);
+    expect(waits).toEqual([5_000, 10_000, 15_000]);
+    // Nothing saved as a gap, and the file kept.
+    expect(await savedSegments(note.id)).toEqual([]);
+    expect(deleted).toEqual([]);
+  });
+
+  it('carries on when a rejected setup works again', async () => {
+    const note = await uploadedNote();
+    const { transcriber, waits } = setUp((_, call) => {
+      if (call < 2) {
+        throw new SpeechToTextError('invalid key', {
+          retryable: true,
+          setupError: true,
+        });
+      }
+      return `text ${call}`;
+    });
+
+    await transcriber.transcribe(note, signal());
+
+    expect(waits).toEqual([5_000, 10_000]);
+    expect((await notes.findById(note.id))?.status).toBe('ready');
+  });
+
   it('gives up at once when asked to wait more than 2 minutes', async () => {
     const note = await uploadedNote();
     const { transcriber, calls, waits } = setUp(() => {

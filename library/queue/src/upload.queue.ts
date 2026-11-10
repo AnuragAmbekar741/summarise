@@ -42,6 +42,15 @@ if redis.call('exists', KEYS[3]) == 1 then return 0 end
 if redis.call('lrem', KEYS[2], 1, ARGV[1]) == 0 then return 0 end
 redis.call('rpush', KEYS[1], ARGV[1])
 return 1`;
+// Moves a running job back to the front of the line and releases its lock,
+// as long as the lock is still this worker's (else another one runs it now).
+const PUT_BACK_IF_OWNED = `
+if redis.call('get', KEYS[3]) ~= ARGV[2] then return 0 end
+if redis.call('lrem', KEYS[2], 1, ARGV[1]) == 1 then
+  redis.call('rpush', KEYS[1], ARGV[1])
+end
+redis.call('del', KEYS[3])
+return 1`;
 
 // A plain Redis list used as a queue: jobs go in at the head (LPUSH) and the
 // worker takes them from the tail, so the oldest job goes first. Tests pass
@@ -108,6 +117,17 @@ export function createUploadQueue(
     // it belongs to the copy that is running.
     async drop(job: TakenJob): Promise<void> {
       await redis.lRem(activeKey, 1, job.raw);
+    },
+
+    // Hands an unfinished job back, to be taken again (by any worker) and
+    // carry on: false when the lock is no longer this worker's, and the job
+    // was left alone.
+    async putBack(job: TakenJob, workerId: string): Promise<boolean> {
+      const result = await redis.eval(PUT_BACK_IF_OWNED, {
+        keys: [key, activeKey, lockKey(job.noteId)],
+        arguments: [job.raw, workerId],
+      });
+      return result === 1;
     },
 
     // Removes the job from the active list and releases its lock.

@@ -8,6 +8,10 @@ export const UPLOAD_QUEUE_KEY = 'uploads:pending';
 export const UPLOAD_ACTIVE_KEY = 'uploads:active';
 // `upload:lock:<noteId>` holds the id of the worker running that note.
 export const UPLOAD_LOCK_PREFIX = 'upload:lock:';
+// `upload:failures:<noteId>` counts the note's failed runs in a row.
+export const UPLOAD_FAILURES_PREFIX = 'upload:failures:';
+// A failure count is forgotten this long after the last failure.
+const FAILURES_KEEP_MS = 24 * 60 * 60 * 1000;
 
 export type UploadJob = { noteId: string };
 
@@ -19,6 +23,7 @@ type UploadQueueOptions = {
   key?: string;
   activeKey?: string;
   lockPrefix?: string;
+  failuresPrefix?: string;
   // How long a lock lasts without being renewed.
   lockMs?: number;
 };
@@ -61,10 +66,12 @@ export function createUploadQueue(
     key = UPLOAD_QUEUE_KEY,
     activeKey = UPLOAD_ACTIVE_KEY,
     lockPrefix = UPLOAD_LOCK_PREFIX,
+    failuresPrefix = UPLOAD_FAILURES_PREFIX,
     lockMs = 60_000,
   }: UploadQueueOptions = {},
 ) {
   const lockKey = (noteId: string) => `${lockPrefix}${noteId}`;
+  const failuresKey = (noteId: string) => `${failuresPrefix}${noteId}`;
 
   return {
     // Exposed so the worker renews well within it.
@@ -137,6 +144,25 @@ export function createUploadQueue(
         keys: [lockKey(job.noteId)],
         arguments: [workerId],
       });
+      await redis.del(failuresKey(job.noteId));
+    },
+
+    // Counts one more failed run of the note's job; returns the count.
+    async countFailure(noteId: string): Promise<number> {
+      const count = await redis.incr(failuresKey(noteId));
+      await redis.pExpire(failuresKey(noteId), FAILURES_KEEP_MS);
+      return count;
+    },
+
+    // Whether the note has a job: waiting, taken, or running.
+    async hasJob(noteId: string): Promise<boolean> {
+      if (await redis.exists(lockKey(noteId))) return true;
+      for (const list of [key, activeKey]) {
+        for (const raw of await redis.lRange(list, 0, -1)) {
+          if (parseNoteId(raw) === noteId) return true;
+        }
+      }
+      return false;
     },
 
     // Puts active jobs whose note is not locked back on the queue: their

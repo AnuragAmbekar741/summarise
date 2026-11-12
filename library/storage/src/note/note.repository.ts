@@ -1,4 +1,4 @@
-import { and, desc, eq, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 
 import type { Database } from '../database';
 import { transcriptSegments } from '../transcript-segment/transcript-segment.table';
@@ -128,6 +128,86 @@ export function createNoteRepository(db: Database) {
             eq(notes.source, 'upload'),
             eq(notes.status, 'processing'),
             sql`(select count(*) from ${transcriptSegments} where ${transcriptSegments.noteId} = ${notes.id}) >= ${totalChunks}`,
+          ),
+        )
+        .returning();
+      return note;
+    },
+
+    // Ids of uploads being transcribed, for the sweeper to check each one
+    // still has a job.
+    async listProcessingUploads(): Promise<string[]> {
+      const rows = await db
+        .select({ id: notes.id })
+        .from(notes)
+        .where(and(eq(notes.source, 'upload'), eq(notes.status, 'processing')));
+      return rows.map((row) => row.id);
+    },
+
+    // An upload's transcription can't be done: processing → failed. The
+    // pieces saved so far are kept for a retry.
+    async markUploadFailed(id: string): Promise<void> {
+      await db
+        .update(notes)
+        .set({ status: 'failed' })
+        .where(
+          and(
+            eq(notes.id, id),
+            eq(notes.source, 'upload'),
+            eq(notes.status, 'processing'),
+          ),
+        );
+    },
+
+    // processing → paused. Undefined when the upload wasn't processing.
+    async pauseUpload(id: string): Promise<Note | undefined> {
+      const [note] = await db
+        .update(notes)
+        .set({ status: 'paused' })
+        .where(
+          and(
+            eq(notes.id, id),
+            eq(notes.source, 'upload'),
+            eq(notes.status, 'processing'),
+          ),
+        )
+        .returning();
+      return note;
+    },
+
+    // paused or failed → processing, to carry on from the saved pieces.
+    // Undefined when the upload was neither.
+    async resumeUpload(id: string): Promise<Note | undefined> {
+      const [note] = await db
+        .update(notes)
+        .set({ status: 'processing' })
+        .where(
+          and(
+            eq(notes.id, id),
+            eq(notes.source, 'upload'),
+            inArray(notes.status, ['paused', 'failed']),
+          ),
+        )
+        .returning();
+      return note;
+    },
+
+    // Ends an upload's transcription early: ready with the pieces saved so
+    // far. Undefined when it wasn't processing, paused or failed.
+    async stopUpload(id: string): Promise<Note | undefined> {
+      const [note] = await db
+        .update(notes)
+        .set({
+          status: 'ready',
+          totalChunks: sql`(select count(*) from ${transcriptSegments} where ${transcriptSegments.noteId} = ${notes.id})`,
+          durationMs: sql`(select coalesce(max(${transcriptSegments.endMs}), 0) from ${transcriptSegments} where ${transcriptSegments.noteId} = ${notes.id})`,
+          endedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(notes.id, id),
+            eq(notes.source, 'upload'),
+            inArray(notes.status, ['processing', 'paused', 'failed']),
           ),
         )
         .returning();

@@ -17,6 +17,7 @@ import {
   createTranscriptSegmentRepository,
 } from '@summarise/storage';
 
+import { AudioError } from './audio/audio.errors';
 import { createUploadSweeper } from './upload/upload.sweeper';
 import { createUploadTranscriber } from './upload/upload.transcriber';
 import { createUploadWorker } from './upload/upload.worker';
@@ -45,10 +46,15 @@ const notes = createNoteRepository(db);
 logger.info({ redis: await redis.ping() }, 'worker started');
 
 // Once at start, then every 4 hours. A failed sweep is retried on the next one.
-const sweeper = createUploadSweeper({ notes, blob });
+const sweeper = createUploadSweeper({
+  notes,
+  blob,
+  queue: createUploadQueue(redis),
+});
 async function sweep() {
   try {
     await sweeper.sweep();
+    await sweeper.requeueStuck();
   } catch (error) {
     logger.error({ err: error }, 'upload sweep failed');
   }
@@ -78,6 +84,8 @@ const worker = createUploadWorker({
   // until Groq accepts the setup again.
   isSetupError: (error) =>
     error instanceof SpeechToTextError && error.setupError,
+  // A file with no audio, or not a media file, fails the same way each time.
+  isPermanentError: (error) => error instanceof AudioError && !error.retryable,
   checkSetup: () => checkGroqSetup({ apiKey: config.GROQ_API_KEY }),
 });
 await worker.start();

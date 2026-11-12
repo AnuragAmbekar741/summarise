@@ -23,7 +23,16 @@ describe('upload sweeper', async () => {
   const notes = createNoteRepository(db);
   const dir = mkdtempSync(join(tmpdir(), 'summarise-blob-'));
   const blob = createLocalBlobStore(dir);
-  const sweeper = createUploadSweeper({ notes, blob });
+  // Note ids with a job, standing in for the Redis queue.
+  const jobs = new Set<string>();
+  const sweeper = createUploadSweeper({
+    notes,
+    blob,
+    queue: {
+      hasJob: async (noteId) => jobs.has(noteId),
+      push: async (noteId) => void jobs.add(noteId),
+    },
+  });
   const user = await createUserRepository(db).create({
     name: 'Sweeper Test',
     email: `test+${crypto.randomUUID()}@example.com`,
@@ -78,5 +87,21 @@ describe('upload sweeper', async () => {
       expect(swept).not.toContain(note.id);
       expect(await notes.findByIdForUser(note.id, user.id)).toBeDefined();
     }
+  });
+
+  it('queues again an upload processing with no job, and only that', async () => {
+    const [stuck, running, recording] = await Promise.all([
+      createNote({ source: 'upload', status: 'processing' }),
+      createNote({ source: 'upload', status: 'processing' }),
+      createNote({ source: 'recording', status: 'processing' }),
+    ]);
+    jobs.add(running.id);
+
+    const requeued = await sweeper.requeueStuck();
+
+    expect(requeued).toContain(stuck.id);
+    expect(requeued).not.toContain(running.id);
+    expect(requeued).not.toContain(recording.id);
+    expect(jobs.has(stuck.id)).toBe(true);
   });
 });

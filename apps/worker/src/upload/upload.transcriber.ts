@@ -48,7 +48,9 @@ type UploadTranscriberDeps = {
 // Turns an uploaded file into the note's transcript: each ~30s piece is
 // transcribed and saved as a segment, then the note is marked ready and the
 // file deleted. Pieces saved by an earlier, interrupted run are skipped, so
-// a retried job carries on where the last one stopped.
+// a retried job carries on where the last one stopped. Before each new piece
+// it checks the note is still processing: paused, stopped early or deleted,
+// it stops there.
 export function createUploadTranscriber({
   blob,
   notes,
@@ -106,6 +108,10 @@ export function createUploadTranscriber({
     }
   }
 
+  async function stillProcessing(noteId: string) {
+    return (await notes.findById(noteId))?.status === 'processing';
+  }
+
   async function save(
     note: Note,
     piece: AudioPiece,
@@ -145,6 +151,13 @@ export function createUploadTranscriber({
           break;
         }
         const done = saved.get(piece.seq);
+        if (!done && !(await stillProcessing(note.id))) {
+          logger.info(
+            { noteId: note.id, seq: piece.seq },
+            'upload no longer processing; stopped transcribing',
+          );
+          return;
+        }
         previousText = done
           ? textOf(done)
           : await transcribePiece(note, piece, previousText, signal);

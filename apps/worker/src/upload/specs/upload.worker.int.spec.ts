@@ -14,6 +14,8 @@ import { createUploadWorker, type UploadWorker } from '../upload.worker';
 // keys of its own, so the real worker never sees these jobs.
 // What a handler throws when the provider rejects our setup.
 const SETUP_ERROR = new Error('invalid API key');
+// What a handler throws when a retry can't help.
+const PERMANENT_ERROR = new Error('no audio in file');
 
 describe('upload worker', async () => {
   const db = createDatabase(config.DATABASE_URL);
@@ -48,6 +50,7 @@ describe('upload worker', async () => {
       key: `${prefix}pending`,
       activeKey: `${prefix}active`,
       lockPrefix: `${prefix}lock:`,
+      failuresPrefix: `${prefix}failures:`,
       lockMs,
     };
     return { ...options, queue: createUploadQueue(redis, options) };
@@ -64,6 +67,7 @@ describe('upload worker', async () => {
       workerId?: string;
       renewFails?: boolean;
       setup?: () => 'ok' | 'rejected';
+      maxFailures?: number;
     } = {},
   ) {
     const worker = createUploadWorker({
@@ -89,6 +93,8 @@ describe('upload worker', async () => {
       takeTimeoutSeconds: 0.1,
       recoverEveryMs: 100,
       isSetupError: (error) => error === SETUP_ERROR,
+      isPermanentError: (error) => error === PERMANENT_ERROR,
+      maxFailures: options.maxFailures,
       checkSetup: options.setup && (async () => options.setup!()),
       checkEveryMs: 100,
     });
@@ -212,7 +218,7 @@ describe('upload worker', async () => {
     expect(handle).not.toHaveBeenCalled();
   });
 
-  it('keeps going after a job fails', async () => {
+  it('marks the note failed and keeps going when a retry cannot help', async () => {
     const keys = testKeys();
     const [failing, next] = await Promise.all([uploadedNote(), uploadedNote()]);
     const handled: string[] = [];
@@ -222,13 +228,60 @@ describe('upload worker', async () => {
     await startWorker(
       keys,
       async (note) => {
-        if (note.id === failing.id) throw new Error('bad file');
+        if (note.id === failing.id) throw PERMANENT_ERROR;
         handled.push(note.id);
       },
       { concurrency: 1 },
     ).start();
 
     await vi.waitFor(() => expect(handled).toEqual([next.id]));
+    await vi.waitFor(async () =>
+      expect(await listLengths(keys)).toEqual({ pending: 0, active: 0 }),
+    );
+    expect((await notes.findById(failing.id))?.status).toBe('failed');
+  });
+
+  it('retries a failing job once its lock expires, then marks it failed', async () => {
+    const keys = testKeys(300);
+    const note = await uploadedNote();
+    const handle = vi.fn(async () => {
+      throw new Error('network down');
+    });
+    await keys.queue.push(note.id);
+
+    await startWorker(keys, handle, { maxFailures: 2 }).start();
+
+    await vi.waitFor(
+      async () =>
+        expect((await notes.findById(note.id))?.status).toBe('failed'),
+      { timeout: 3_000 },
+    );
+    expect(handle).toHaveBeenCalledTimes(2);
+    await vi.waitFor(async () =>
+      expect(await listLengths(keys)).toEqual({ pending: 0, active: 0 }),
+    );
+  });
+
+  it('runs a job again after its lock was lost and nobody took it', async () => {
+    // As when the computer sleeps past the lock time.
+    const keys = testKeys(300);
+    const note = await uploadedNote();
+    const handle = vi.fn(async (_note: Note, signal: AbortSignal) => {
+      if (handle.mock.calls.length > 1) return;
+      await new Promise((resolve) =>
+        signal.addEventListener('abort', resolve, { once: true }),
+      );
+      signal.throwIfAborted();
+    });
+    await keys.queue.push(note.id);
+    await startWorker(keys, handle).start();
+    await vi.waitFor(() => expect(handle).toHaveBeenCalledOnce());
+
+    await redis.del(`${keys.lockPrefix}${note.id}`);
+
+    await vi.waitFor(() => expect(handle).toHaveBeenCalledTimes(2), {
+      timeout: 3_000,
+    });
     await vi.waitFor(async () =>
       expect(await listLengths(keys)).toEqual({ pending: 0, active: 0 }),
     );
@@ -330,10 +383,9 @@ describe('upload worker', async () => {
 
     await vi.waitFor(() => expect(held.signals[0]?.aborted).toBe(true));
     held.release();
-    // Finishing leaves the other worker's lock alone.
-    await vi.waitFor(async () =>
-      expect(await listLengths(keys)).toEqual({ pending: 0, active: 0 }),
-    );
+    // The job is now the other worker's: left as it is, lock and all.
+    await vi.waitFor(() => expect(held.running).toEqual([]));
+    expect(await listLengths(keys)).toEqual({ pending: 0, active: 1 });
     expect(await redis.get(lockKey)).toBe('other-worker');
   });
 

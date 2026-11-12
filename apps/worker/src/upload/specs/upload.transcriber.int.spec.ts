@@ -136,6 +136,22 @@ describe('upload transcriber', async () => {
     expect(deleted).toEqual([uploadKey(note.id)]);
   });
 
+  it('stops before the next piece once the note is paused, keeping the file', async () => {
+    const note = await uploadedNote();
+    const { transcriber, calls, deleted } = setUp(async (_, call) => {
+      // Paused while the first piece is being transcribed.
+      if (call === 0) await notes.pauseUpload(note.id);
+      return `text ${call}`;
+    });
+
+    await transcriber.transcribe(note, signal());
+
+    expect(calls).toHaveLength(1);
+    expect((await savedSegments(note.id)).map((s) => s.seq)).toEqual([0]);
+    expect((await notes.findById(note.id))?.status).toBe('paused');
+    expect(deleted).toEqual([]);
+  });
+
   it('skips pieces saved by an earlier run and carries on', async () => {
     const note = await uploadedNote();
     await segments.upsert({

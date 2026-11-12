@@ -26,6 +26,8 @@ const STATUSES = {
     label: 'Transcribing',
     dot: 'animate-pulse bg-muted-foreground motion-reduce:animate-none',
   },
+  uploadPaused: { label: 'Paused', dot: 'border-2 border-muted-foreground' },
+  failed: { label: 'Transcription failed', dot: 'bg-destructive' },
 } as const;
 
 // Where the note stands, at the start of the line under the title.

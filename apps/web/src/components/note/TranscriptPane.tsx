@@ -12,10 +12,12 @@ export type TranscriptMode =
   // Recording, but in another browser: nothing to control from here.
   | 'elsewhere'
   // An uploaded file: being sent from this tab, cut off before it arrived,
-  // or arrived and being transcribed.
+  // arrived and being transcribed, its transcription paused, or failed.
   | 'uploading'
   | 'interrupted'
-  | 'transcribing';
+  | 'transcribing'
+  | 'uploadPaused'
+  | 'failed';
 
 type TranscriptPaneProps = {
   segments: PublicTranscriptSegment[];
@@ -82,6 +84,11 @@ export function TranscriptPane({
         <p className="text-body-md text-muted-foreground">
           The upload stopped before it finished. Delete this note and upload the
           file again.
+        </p>
+      )}
+      {mode === 'failed' && (
+        <p className="mt-6 text-body-md text-muted-foreground">
+          Transcription stopped after an error. Retry carries on from here.
         </p>
       )}
       {mode === 'ready' && segments.length === 0 && (

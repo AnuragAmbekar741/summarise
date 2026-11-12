@@ -20,6 +20,7 @@ import { DeleteNoteDialog } from '@/components/note/DeleteNoteDialog';
 import { NoteActionsMenu } from '@/components/note/NoteActionsMenu';
 import { NotesPane } from '@/components/note/NotesPane';
 import { RecordingPill } from '@/components/note/RecordingPill';
+import { UploadPill } from '@/components/upload/UploadPill';
 import { StatusChip } from '@/components/note/StatusChip';
 import {
   TranscriptPane,
@@ -32,6 +33,7 @@ import { useElapsedMs } from '@/hooks/recorder/useElapsedMs';
 import { useLocalSession } from '@/hooks/recorder/useLocalSession';
 import { usePendingChunks } from '@/hooks/recorder/usePendingChunks';
 import { useRecorder } from '@/hooks/recorder/useRecorder';
+import { useUploadControls } from '@/hooks/upload/useUploadControls';
 import { useUploads } from '@/hooks/upload/useUploads';
 import type { RecorderState } from '@/lib/recording/chunk.recorder';
 import { recorderErrorMessage } from '@/lib/recording/recorder.utils';
@@ -58,6 +60,7 @@ function NoteView({ noteId }: { noteId: string }) {
   const pendingChunks = usePendingChunks(noteId);
   const recorder = useRecorder();
   const uploadProgress = useUploads().progress[noteId];
+  const uploadControls = useUploadControls(noteId);
   const elapsedMs = useElapsedMs();
   // Between clicking Stop and the service hearing about it.
   const [stopClicked, setStopClicked] = useState(false);
@@ -200,6 +203,22 @@ function NoteView({ noteId }: { noteId: string }) {
           />
         </FloatingWidget>
       )}
+
+      {(mode === 'transcribing' ||
+        mode === 'uploadPaused' ||
+        mode === 'failed') && (
+        <FloatingWidget label="Transcription controls">
+          <UploadPill
+            mode={mode}
+            busy={uploadControls.isPending}
+            onPause={() => uploadControls.mutate('pause')}
+            onResume={() => uploadControls.mutate('resume')}
+            onStop={() => uploadControls.mutate('stop')}
+            // Cancel deletes the note, after the usual confirmation.
+            onCancel={() => setDeleting(true)}
+          />
+        </FloatingWidget>
+      )}
     </div>
   );
 }
@@ -225,6 +244,8 @@ function modeFor({
   if (status === 'ready') return 'ready';
   if (source === 'upload') {
     if (status === 'processing') return 'transcribing';
+    if (status === 'paused') return 'uploadPaused';
+    if (status === 'failed') return 'failed';
     // Only the tab sending the file knows it's still on its way.
     return uploading ? 'uploading' : 'interrupted';
   }

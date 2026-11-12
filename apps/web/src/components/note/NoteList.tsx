@@ -67,6 +67,16 @@ function NoteRow({ note }: { note: PublicNote }) {
               className="mt-2 text-caption"
             />
           )}
+          {note.status === 'paused' && (
+            <p className="mt-2 text-caption text-muted-foreground">
+              Transcription paused
+            </p>
+          )}
+          {note.status === 'failed' && (
+            <p className="mt-2 text-caption text-muted-foreground">
+              Transcription failed
+            </p>
+          )}
           {note.status === 'recording' && (
             <p className="mt-2 text-caption text-muted-foreground">Recording</p>
           )}

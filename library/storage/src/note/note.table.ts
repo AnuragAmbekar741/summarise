@@ -18,12 +18,16 @@ export const noteSource = pgEnum('note_source', [
 ]);
 
 // A recording: recording → processing (stopped, last chunks still arriving)
-// → ready. An upload: uploading → processing (being transcribed) → ready.
+// → ready. An upload: uploading → processing (being transcribed) → ready;
+// while transcribing it can be paused (and resumed), stopped early (ready
+// with the transcript so far), or fail (and be retried).
 export const noteStatus = pgEnum('note_status', [
   'recording',
   'processing',
   'ready',
   'uploading',
+  'paused',
+  'failed',
 ]);
 
 export const notes = pgTable(

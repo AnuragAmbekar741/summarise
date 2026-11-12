@@ -36,6 +36,13 @@
       "when": 1793349679265,
       "tag": "0004_add_upload_note",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794511718556,
+      "tag": "0005_add_paused_failed_status",
+      "breakpoints": true
     }
   ]
 }

@@ -87,8 +87,13 @@ export function createUploadService({
       // A retried call after the first one went through.
       if (note.status === 'paused') return toPublicNote(note);
       const paused = await notes.pauseUpload(note.id);
-      if (!paused) throw notTranscribing();
-      return toPublicNote(paused);
+      if (paused) return toPublicNote(paused);
+      // The worker finished it (or another call paused it) meanwhile.
+      const now = await noteService.getOwnedNote(userId, noteId);
+      if (now.status === 'paused' || now.status === 'ready') {
+        return toPublicNote(now);
+      }
+      throw notTranscribing();
     },
 
     // Carries on transcribing a paused upload, or tries a failed one again,
@@ -104,8 +109,10 @@ export function createUploadService({
           'This upload is not paused',
         );
       }
-      // Paused again, so Resume can be tried again.
-      await queueOrUndo(resumed.id, () => notes.pauseUpload(resumed.id));
+      // Back as it was (paused or failed), so Resume can be tried again.
+      await queueOrUndo(resumed.id, () =>
+        notes.update(resumed.id, { status: note.status }),
+      );
       return toPublicNote(resumed);
     },
 
@@ -115,7 +122,13 @@ export function createUploadService({
       const note = await getOwnedUpload(userId, noteId);
       if (note.status === 'ready') return toPublicNote(note);
       const stopped = await notes.stopUpload(note.id);
-      if (!stopped) throw notTranscribing();
+      if (!stopped) {
+        // The worker finished it meanwhile: it is ready, which is what Stop
+        // asked for.
+        const now = await noteService.getOwnedNote(userId, noteId);
+        if (now.status === 'ready') return toPublicNote(now);
+        throw notTranscribing();
+      }
       // The transcript is saved; a file left behind only costs storage.
       await blob
         .delete(uploadKey(note.id))

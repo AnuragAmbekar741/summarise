@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
 
 import type { Database } from '../database';
 import { transcriptSegments } from '../transcript-segment/transcript-segment.table';
@@ -142,6 +142,23 @@ export function createNoteRepository(db: Database) {
         .from(notes)
         .where(and(eq(notes.source, 'upload'), eq(notes.status, 'processing')));
       return rows.map((row) => row.id);
+    },
+
+    // An upload's length, measured before transcribing it: only while it is
+    // still processing and has none, so a stop that landed meanwhile keeps
+    // its own.
+    async setUploadLength(id: string, durationMs: number): Promise<void> {
+      await db
+        .update(notes)
+        .set({ durationMs })
+        .where(
+          and(
+            eq(notes.id, id),
+            eq(notes.source, 'upload'),
+            eq(notes.status, 'processing'),
+            isNull(notes.durationMs),
+          ),
+        );
     },
 
     // An upload's transcription can't be done: processing → failed. The

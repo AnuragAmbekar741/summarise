@@ -45,6 +45,8 @@ type UploadTranscriberDeps = {
   maxAudioMs?: number;
   wait?: (ms: number, signal: AbortSignal) => Promise<void>;
   probe?: (source: string) => Promise<number | undefined>;
+  // Called after each piece is saved (to forget earlier failed runs).
+  onPieceSaved?: (noteId: string) => Promise<void>;
 };
 
 // Turns an uploaded file into the note's transcript: each ~30s piece is
@@ -61,15 +63,17 @@ export function createUploadTranscriber({
   maxAudioMs = MAX_AUDIO_MS,
   wait = (ms, signal) => sleep(ms, undefined, { signal }),
   probe = probeDurationMs,
+  onPieceSaved,
 }: UploadTranscriberDeps) {
   // One piece's text, trying again while the provider is busy. A piece the
   // provider rejects for good is saved as a gap, as with live recording.
+  // Null when the note stopped processing meanwhile; nothing was saved.
   async function transcribePiece(
     note: Note,
     piece: AudioPiece,
     previousText: string,
     signal: AbortSignal,
-  ): Promise<string> {
+  ): Promise<string | null> {
     // Counted apart, so setup retries don't use up the busy ones.
     let setupFailures = 0;
     let busyFailures = 0;
@@ -81,8 +85,7 @@ export function createUploadTranscriber({
           prompt: previousText.slice(-PROMPT_CHARS) || undefined,
           signal,
         });
-        await save(note, piece, text, false, signal);
-        return text;
+        return (await save(note, piece, text, false, signal)) ? text : null;
       } catch (error) {
         if (!(error instanceof SpeechToTextError)) throw error;
         if (error.setupError) {
@@ -96,8 +99,7 @@ export function createUploadTranscriber({
             { err: error, noteId: note.id, seq: piece.seq },
             'piece could not be transcribed',
           );
-          await save(note, piece, '', true, signal);
-          return '';
+          return (await save(note, piece, '', true, signal)) ? '' : null;
         }
         busyFailures++;
         if (busyFailures === MAX_ATTEMPTS) throw error;
@@ -121,9 +123,12 @@ export function createUploadTranscriber({
     text: string,
     failed: boolean,
     signal: AbortSignal,
-  ) {
+  ): Promise<boolean> {
     // The lock was lost: another worker may be saving this note now.
     signal.throwIfAborted();
+    // Paused, stopped or deleted while this piece was transcribed: a stopped
+    // note is already ready with the pieces before this one.
+    if (!(await stillProcessing(note.id))) return false;
     await segments.upsert({
       noteId: note.id,
       seq: piece.seq,
@@ -132,6 +137,10 @@ export function createUploadTranscriber({
       rawText: text,
       transcriptionFailed: failed,
     });
+    await onPieceSaved?.(note.id).catch((error: unknown) =>
+      logger.warn({ err: error, noteId: note.id }, 'piece progress not noted'),
+    );
+    return true;
   }
 
   return {
@@ -143,9 +152,10 @@ export function createUploadTranscriber({
       if (note.durationMs === null) {
         const durationMs = await probe(url);
         if (durationMs !== undefined) {
-          await notes.update(note.id, {
-            durationMs: Math.min(durationMs, maxAudioMs),
-          });
+          await notes.setUploadLength(
+            note.id,
+            Math.min(durationMs, maxAudioMs),
+          );
         }
       }
       const saved = new Map(
@@ -171,9 +181,17 @@ export function createUploadTranscriber({
           );
           return;
         }
-        previousText = done
+        const text = done
           ? textOf(done)
           : await transcribePiece(note, piece, previousText, signal);
+        if (text === null) {
+          logger.info(
+            { noteId: note.id, seq: piece.seq },
+            'upload no longer processing; stopped transcribing',
+          );
+          return;
+        }
+        previousText = text;
         totalChunks = piece.seq + 1;
         durationMs = piece.startMs + piece.durationMs;
       }

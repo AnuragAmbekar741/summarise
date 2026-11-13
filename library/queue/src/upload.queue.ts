@@ -154,6 +154,12 @@ export function createUploadQueue(
       return count;
     },
 
+    // Forgets the note's failed runs: called once a run makes progress, so
+    // only failures in a row count.
+    async clearFailures(noteId: string): Promise<void> {
+      await redis.del(failuresKey(noteId));
+    },
+
     // Whether the note has a job: waiting, taken, or running.
     async hasJob(noteId: string): Promise<boolean> {
       if (await redis.exists(lockKey(noteId))) return true;

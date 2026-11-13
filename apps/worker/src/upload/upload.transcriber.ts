@@ -14,6 +14,7 @@ import type {
 } from '@summarise/storage';
 
 import { readPieces, type AudioPiece } from '../audio/audio.pieces';
+import { probeDurationMs } from '../audio/ffprobe';
 
 // Long enough for the slowest job: ffmpeg reuses the URL to reconnect.
 const URL_VALID_SECONDS = 6 * 60 * 60;
@@ -43,6 +44,7 @@ type UploadTranscriberDeps = {
   // Injected in tests.
   maxAudioMs?: number;
   wait?: (ms: number, signal: AbortSignal) => Promise<void>;
+  probe?: (source: string) => Promise<number | undefined>;
 };
 
 // Turns an uploaded file into the note's transcript: each ~30s piece is
@@ -58,6 +60,7 @@ export function createUploadTranscriber({
   speechToText,
   maxAudioMs = MAX_AUDIO_MS,
   wait = (ms, signal) => sleep(ms, undefined, { signal }),
+  probe = probeDurationMs,
 }: UploadTranscriberDeps) {
   // One piece's text, trying again while the provider is busy. A piece the
   // provider rejects for good is saved as a gap, as with live recording.
@@ -135,6 +138,16 @@ export function createUploadTranscriber({
     async transcribe(note: Note, signal: AbortSignal): Promise<void> {
       const key = uploadKey(note.id);
       const url = await blob.presignGet(key, URL_VALID_SECONDS);
+      // The length up front, so the app can show how far it has got
+      // ("18:20 of 60:00"). Replaced by the exact length once done.
+      if (note.durationMs === null) {
+        const durationMs = await probe(url);
+        if (durationMs !== undefined) {
+          await notes.update(note.id, {
+            durationMs: Math.min(durationMs, maxAudioMs),
+          });
+        }
+      }
       const saved = new Map(
         (await segments.listByNote(note.id)).map((s) => [s.seq, s]),
       );

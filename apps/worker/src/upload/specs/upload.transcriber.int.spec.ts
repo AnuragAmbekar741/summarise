@@ -136,6 +136,20 @@ describe('upload transcriber', async () => {
     expect(deleted).toEqual([uploadKey(note.id)]);
   });
 
+  it('saves the length before transcribing the first piece', async () => {
+    const note = await uploadedNote();
+    let lengthAtStart: number | null | undefined;
+    const { transcriber } = setUp(async (_, call) => {
+      if (call === 0)
+        lengthAtStart = (await notes.findById(note.id))?.durationMs;
+      return `text ${call}`;
+    });
+
+    await transcriber.transcribe(note, signal());
+
+    expect(Math.abs(lengthAtStart! - 70_000)).toBeLessThan(100);
+  });
+
   it('stops before the next piece once the note is paused, keeping the file', async () => {
     const note = await uploadedNote();
     const { transcriber, calls, deleted } = setUp(async (_, call) => {

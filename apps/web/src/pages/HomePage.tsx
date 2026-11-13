@@ -7,11 +7,13 @@ import { PageGradient } from '@/components/common/PageGradient';
 import { LiveNoteCard } from '@/components/note/LiveNoteCard';
 import { NoteList } from '@/components/note/NoteList';
 import { Button } from '@/components/ui/button';
+import { hasUploadCard, UploadCard } from '@/components/upload/UploadCard';
 import { UploadDialog } from '@/components/upload/UploadDialog';
 import { useNotes } from '@/hooks/note/useNotes';
 import { useStartNote } from '@/hooks/note/useStartNote';
 import { useRecorder } from '@/hooks/recorder/useRecorder';
 import { useUnfinishedSessions } from '@/hooks/recorder/useUnfinishedSessions';
+import { useUploads } from '@/hooks/upload/useUploads';
 
 // Spec: docs/design/pages/home.md
 export function HomePage() {
@@ -19,12 +21,20 @@ export function HomePage() {
   const recorder = useRecorder();
   const sessions = useUnfinishedSessions();
   const notes = useNotes();
+  const sendProgress = useUploads().progress;
   const [uploading, setUploading] = useState(false);
 
+  // Uploads still being sent or transcribed get a card of their own.
+  const uploadCards = (notes.data ?? []).filter((note) =>
+    hasUploadCard(note, sendProgress[note.id] !== undefined),
+  );
+  const carded = new Set(uploadCards.map((note) => note.id));
   // A note still recording from this browser already has its live card.
   const liveIds = new Set(sessions.map((session) => session.noteId));
   const listed = (notes.data ?? []).filter(
-    (note) => !(liveIds.has(note.id) && note.status === 'recording'),
+    (note) =>
+      !carded.has(note.id) &&
+      !(liveIds.has(note.id) && note.status === 'recording'),
   );
 
   return (
@@ -61,10 +71,17 @@ export function HomePage() {
         </div>
         <UploadDialog open={uploading} onOpenChange={setUploading} />
 
-        {sessions.length > 0 && (
+        {(sessions.length > 0 || uploadCards.length > 0) && (
           <div className="mt-8 space-y-4">
             {sessions.map((session) => (
               <LiveNoteCard key={session.noteId} session={session} />
+            ))}
+            {uploadCards.map((note) => (
+              <UploadCard
+                key={note.id}
+                note={note}
+                sendProgress={sendProgress[note.id]}
+              />
             ))}
           </div>
         )}
@@ -78,7 +95,8 @@ export function HomePage() {
           (listed.length > 0 ? (
             <NoteList notes={listed} className="mt-8" />
           ) : (
-            sessions.length === 0 && (
+            sessions.length === 0 &&
+            uploadCards.length === 0 && (
               <p className="mt-8 text-body-md text-muted-foreground">
                 No notes yet. Start the notetaker in your next lecture.
               </p>

@@ -20,6 +20,7 @@ import { DeleteNoteDialog } from '@/components/note/DeleteNoteDialog';
 import { NoteActionsMenu } from '@/components/note/NoteActionsMenu';
 import { NotesPane } from '@/components/note/NotesPane';
 import { RecordingPill } from '@/components/note/RecordingPill';
+import { UploadPhase } from '@/components/upload/UploadPhase';
 import { UploadPill } from '@/components/upload/UploadPill';
 import { StatusChip } from '@/components/note/StatusChip';
 import {
@@ -39,6 +40,11 @@ import type { RecorderState } from '@/lib/recording/chunk.recorder';
 import { recorderErrorMessage } from '@/lib/recording/recorder.utils';
 import type { LocalSession } from '@/lib/recording/recording.store';
 import { formatDuration, formatNoteDate } from '@/lib/time.utils';
+import {
+  percent,
+  progressLabel,
+  transcriptionProgress,
+} from '@/lib/upload/progress.utils';
 
 // Kept to one short line in the header. Only the web app holds it to this;
 // the service allows up to NOTE_DESCRIPTION_MAX.
@@ -103,6 +109,21 @@ function NoteView({ noteId }: { noteId: string }) {
     if (durationMs !== null) meta.push(formatDuration(durationMs));
     if (segments.length > 0) meta.push(formatWords(countWords(segments)));
   }
+  // An upload on its way: how far it has got, sending or transcribing.
+  const progress = transcriptionProgress(durationMs, segments);
+  const uploadMode =
+    mode === 'uploading' ||
+    mode === 'transcribing' ||
+    mode === 'uploadPaused' ||
+    mode === 'failed'
+      ? mode
+      : null;
+  const stepProgress =
+    uploadMode === 'uploading' ? (uploadProgress ?? 0) : progress.fraction;
+  const chipDetail =
+    uploadMode && uploadMode !== 'failed' && stepProgress !== null
+      ? percent(stepProgress)
+      : undefined;
   if (pendingChunks > 0) {
     meta.push(
       `${pendingChunks} ${pendingChunks === 1 ? 'part' : 'parts'} uploading`,
@@ -146,11 +167,14 @@ function NoteView({ noteId }: { noteId: string }) {
           className="mt-4 text-body-md text-body"
         />
         <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <StatusChip mode={mode} />
+          <StatusChip mode={mode} detail={chipDetail} />
           <p className="text-body-sm text-muted-foreground">
             {meta.join(' · ')}
           </p>
         </div>
+        {uploadMode && (
+          <UploadPhase mode={uploadMode} progress={stepProgress} />
+        )}
 
         <Tabs defaultValue="transcript" className="mt-12">
           <div className="flex items-center justify-between gap-4">
@@ -211,6 +235,8 @@ function NoteView({ noteId }: { noteId: string }) {
           <UploadPill
             mode={mode}
             busy={uploadControls.isPending}
+            detail={progress.doneMs > 0 ? progressLabel(progress) : undefined}
+            progress={progress.fraction}
             onPause={() => uploadControls.mutate('pause')}
             onResume={() => uploadControls.mutate('resume')}
             onStop={() => uploadControls.mutate('stop')}

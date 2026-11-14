@@ -3,7 +3,6 @@ import { Pause, Play, RotateCcw, Square, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
-import { LoadingDots } from '@/components/common/LoadingDots';
 import { DeleteNoteDialog } from '@/components/note/DeleteNoteDialog';
 import { useTranscript } from '@/hooks/note/useTranscript';
 import { useUploadControls } from '@/hooks/upload/useUploadControls';
@@ -23,9 +22,9 @@ export function isUploadInProgress(note: PublicNote, sending: boolean) {
   );
 }
 
-// An upload in progress on Home: a note row like the others, with one quiet
-// line of status, a thin progress bar, and three small controls. The whole
-// row opens the note. The controls keep their places in every state
+// An upload in progress on Home: a slim card with the title, one quiet line
+// of status, three small controls, and a progress bar across its width. The
+// title opens the note. The controls keep their places in every state
 // (unavailable ones are disabled), so nothing moves under the pointer.
 export function UploadRow({
   note,
@@ -49,62 +48,66 @@ export function UploadRow({
   const running = sending || note.status === 'processing';
 
   return (
-    // Same row as the note list: lifts to a card surface on hover or focus.
-    <div className="group/row relative -mx-3 rounded-xl px-3 transition-colors duration-200 focus-within:bg-surface-card hover:bg-surface-card">
-      <Link to={`/notes/${note.id}`} className="group block py-2 pr-32">
-        <p className="truncate font-display text-title-md font-light text-ink decoration-1 underline-offset-4 group-hover:underline">
-          {note.title}
-        </p>
-        <div className="mt-2 w-56 max-w-full">
+    // A card lined up with the page's content, the progress bar across its
+    // full width.
+    <div className="rounded-xl border border-hairline bg-surface-card px-4 pt-3 pb-4 shadow-soft transition-colors duration-200 focus-within:border-hairline-strong hover:border-hairline-strong">
+      <div className="flex items-center gap-4">
+        <Link
+          to={`/notes/${note.id}`}
+          className="group min-w-0 flex-1 outline-none"
+        >
+          <p className="truncate font-display text-title-md font-light text-ink decoration-1 underline-offset-4 group-hover:underline group-focus-visible:underline">
+            {note.title}
+          </p>
           <Status
             status={note.status}
             sendProgress={sendProgress ?? 0}
             fraction={progress.fraction}
             started={progress.doneMs > 0}
           />
-          <div className="mt-1.5 h-0.5 overflow-hidden rounded-full bg-hairline">
-            <div
-              className="h-full rounded-full bg-ink transition-[width] duration-500"
-              style={{ width: `${(fraction ?? 0) * 100}%` }}
-            />
-          </div>
-        </div>
-      </Link>
-
-      <div className="absolute top-1/2 right-1 flex -translate-y-1/2 items-center">
-        {running ? (
+        </Link>
+        <div className="flex shrink-0 items-center">
+          {running ? (
+            <IconButton
+              label="Pause"
+              // A file that is still sending can't be paused yet.
+              disabled={busy || sending}
+              onClick={() => controls.mutate('pause')}
+            >
+              <Pause />
+            </IconButton>
+          ) : (
+            <IconButton
+              label={note.status === 'failed' ? 'Retry' : 'Resume'}
+              disabled={busy}
+              onClick={() => controls.mutate('resume')}
+            >
+              {note.status === 'failed' ? <RotateCcw /> : <Play />}
+            </IconButton>
+          )}
           <IconButton
-            label="Pause"
-            // A file that is still sending can't be paused yet.
-            disabled={busy || sending}
-            onClick={() => controls.mutate('pause')}
+            label="Stop and keep the transcript so far"
+            // Nothing to keep until a piece is transcribed.
+            disabled={busy || sending || progress.doneMs === 0}
+            onClick={() => controls.mutate('stop')}
           >
-            <Pause />
+            <Square />
           </IconButton>
-        ) : (
           <IconButton
-            label={note.status === 'failed' ? 'Retry' : 'Resume'}
+            label="Cancel and delete"
             disabled={busy}
-            onClick={() => controls.mutate('resume')}
+            onClick={() => setCancelling(true)}
           >
-            {note.status === 'failed' ? <RotateCcw /> : <Play />}
+            <X />
           </IconButton>
-        )}
-        <IconButton
-          label="Stop and keep the transcript so far"
-          // Nothing to keep until a piece is transcribed.
-          disabled={busy || sending || progress.doneMs === 0}
-          onClick={() => controls.mutate('stop')}
-        >
-          <Square />
-        </IconButton>
-        <IconButton
-          label="Cancel and delete"
-          disabled={busy}
-          onClick={() => setCancelling(true)}
-        >
-          <X />
-        </IconButton>
+        </div>
+      </div>
+
+      <div className="mt-3 h-0.5 overflow-hidden rounded-full bg-hairline">
+        <div
+          className="h-full rounded-full bg-ink transition-[width] duration-500"
+          style={{ width: `${(fraction ?? 0) * 100}%` }}
+        />
       </div>
 
       <DeleteNoteDialog
@@ -128,22 +131,26 @@ function Status({
   fraction: number | null;
   started: boolean;
 }) {
-  const className = 'text-caption text-muted-foreground';
   const done = fraction === null ? '' : ` · ${percent(fraction)}`;
-  if (status === 'uploading') {
-    return (
-      <p className={className}>
-        Sending · {percent(sendProgress)} · keep this tab open
-      </p>
-    );
-  }
-  if (status === 'paused') return <p className={className}>Paused{done}</p>;
-  if (status === 'failed') return <p className={className}>Failed{done}</p>;
+  const [text, working] =
+    status === 'uploading'
+      ? [`Sending · ${percent(sendProgress)} · keep this tab open`, true]
+      : status === 'paused'
+        ? [`Paused${done}`, false]
+        : status === 'failed'
+          ? [`Failed${done}`, false]
+          : [started ? `Transcribing${done}` : 'Starting…', true];
   return (
-    <LoadingDots
-      label={started ? `Transcribing${done}` : 'Starting…'}
-      className={cn(className, 'flex')}
-    />
+    <p className="mt-1 text-caption text-muted-foreground">
+      {/* Work in progress shimmers, like the loading dots' label. */}
+      <span
+        className={cn(
+          working && 'shimmer-text animate-shimmer motion-reduce:animate-none',
+        )}
+      >
+        {text}
+      </span>
+    </p>
   );
 }
 

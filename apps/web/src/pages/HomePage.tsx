@@ -84,7 +84,7 @@ export function HomePage() {
             <h2 className="font-sans text-caption-upper text-muted-foreground uppercase">
               In progress
             </h2>
-            <ul className="mt-3 space-y-1">
+            <ul className="mt-3 space-y-3">
               {inProgress.map((note) => (
                 <li key={note.id}>
                   <UploadRow note={note} sendProgress={sendProgress[note.id]} />

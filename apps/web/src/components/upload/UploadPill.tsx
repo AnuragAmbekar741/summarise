@@ -10,8 +10,6 @@ type UploadPillProps = {
   mode: 'transcribing' | 'uploadPaused' | 'failed';
   // An action is on its way to the service.
   busy: boolean;
-  // A second line under the label, e.g. "18:20 of 1:00:00".
-  detail?: string;
   // 0 to 1, drawn as a thin line along the bottom; null while unknown.
   progress?: number | null;
   onPause: () => void;
@@ -23,7 +21,6 @@ type UploadPillProps = {
 export function UploadPill({
   mode,
   busy,
-  detail,
   progress,
   onPause,
   onResume,
@@ -33,17 +30,12 @@ export function UploadPill({
   return (
     <div className="relative inline-flex h-12 items-center overflow-hidden rounded-full bg-primary pr-1.5 pl-5 text-on-primary">
       {/* Wide enough for "Transcribing…" and its dots. */}
-      <span className="flex w-[9.25rem] shrink-0 flex-col justify-center gap-1">
+      <span className="w-[9.25rem] shrink-0">
         {mode === 'transcribing' ? (
           <LoadingDots label="Transcribing…" className="text-on-primary" />
         ) : (
           <span className="text-button">
             {mode === 'failed' ? 'Failed' : 'Paused'}
-          </span>
-        )}
-        {detail && (
-          <span className="truncate font-mono text-[12px] leading-none text-on-primary/70 tabular-nums">
-            {detail}
           </span>
         )}
       </span>

@@ -40,11 +40,7 @@ import type { RecorderState } from '@/lib/recording/chunk.recorder';
 import { recorderErrorMessage } from '@/lib/recording/recorder.utils';
 import type { LocalSession } from '@/lib/recording/recording.store';
 import { formatDuration, formatNoteDate } from '@/lib/time.utils';
-import {
-  percent,
-  progressLabel,
-  transcriptionProgress,
-} from '@/lib/upload/progress.utils';
+import { percent, transcriptionProgress } from '@/lib/upload/progress.utils';
 
 // Kept to one short line in the header. Only the web app holds it to this;
 // the service allows up to NOTE_DESCRIPTION_MAX.
@@ -235,7 +231,6 @@ function NoteView({ noteId }: { noteId: string }) {
           <UploadPill
             mode={mode}
             busy={uploadControls.isPending}
-            detail={progress.doneMs > 0 ? progressLabel(progress) : undefined}
             progress={progress.fraction}
             onPause={() => uploadControls.mutate('pause')}
             onResume={() => uploadControls.mutate('resume')}

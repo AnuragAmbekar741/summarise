@@ -3,7 +3,6 @@ import { ArrowRight } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
-import { GradientOrb } from '@/components/common/GradientOrb';
 import { LoadingDots } from '@/components/common/LoadingDots';
 import { DeleteNoteDialog } from '@/components/note/DeleteNoteDialog';
 import { Button } from '@/components/ui/button';
@@ -30,7 +29,7 @@ export function hasUploadCard(note: PublicNote, sending: boolean) {
   );
 }
 
-// An upload in progress on Home, like the live recording card: where it is
+// An upload in progress on Home, as a plain card: where it is
 // (sending, transcribing, paused, failed), how far it has got, and the same
 // controls as the pill on its note. Buttons that don't apply yet stay in
 // place, disabled, so nothing moves under the pointer when the state
@@ -56,13 +55,8 @@ export function UploadCard({
   const busy = controls.isPending;
 
   return (
-    // overflow-clip, not hidden: the orbs make the content taller than the
-    // card, and a hidden overflow scrolls when a button inside takes focus.
-    <div className="relative overflow-clip rounded-2xl border border-hairline bg-surface-card p-6 shadow-soft sm:px-8 sm:py-7">
-      <GradientOrb color="peach" className="-top-40 left-[35%] size-[360px]" />
-      <GradientOrb color="sky" className="-top-48 -right-24 size-[420px]" />
-
-      <div className="relative">
+    <div className="rounded-2xl border border-hairline bg-surface-card p-6 shadow-soft sm:px-8 sm:py-7">
+      <div>
         <div className="flex items-start gap-4">
           <span
             aria-hidden

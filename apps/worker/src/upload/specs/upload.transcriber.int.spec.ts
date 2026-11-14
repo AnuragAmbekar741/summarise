@@ -136,6 +136,55 @@ describe('upload transcriber', async () => {
     expect(deleted).toEqual([uploadKey(note.id)]);
   });
 
+  it('saves the length before transcribing the first piece', async () => {
+    const note = await uploadedNote();
+    let lengthAtStart: number | null | undefined;
+    const { transcriber } = setUp(async (_, call) => {
+      if (call === 0)
+        lengthAtStart = (await notes.findById(note.id))?.durationMs;
+      return `text ${call}`;
+    });
+
+    await transcriber.transcribe(note, signal());
+
+    expect(Math.abs(lengthAtStart! - 70_000)).toBeLessThan(100);
+  });
+
+  it('stops once the note is paused, keeping the file', async () => {
+    const note = await uploadedNote();
+    const { transcriber, calls, deleted } = setUp(async (_, call) => {
+      // Paused while the second piece is being transcribed.
+      if (call === 1) await notes.pauseUpload(note.id);
+      return `text ${call}`;
+    });
+
+    await transcriber.transcribe(note, signal());
+
+    expect(calls).toHaveLength(2);
+    // The piece in flight is dropped; Resume transcribes it again.
+    expect((await savedSegments(note.id)).map((s) => s.seq)).toEqual([0]);
+    expect((await notes.findById(note.id))?.status).toBe('paused');
+    expect(deleted).toEqual([]);
+  });
+
+  it('saves nothing more once the note is stopped mid-piece', async () => {
+    const note = await uploadedNote();
+    const { transcriber } = setUp(async (_, call) => {
+      // Stopped while the second piece is being transcribed.
+      if (call === 1) await notes.stopUpload(note.id);
+      return `text ${call}`;
+    });
+
+    await transcriber.transcribe(note, signal());
+
+    expect((await savedSegments(note.id)).map((s) => s.seq)).toEqual([0]);
+    // Ready with exactly the pieces it has; the length is theirs, not the
+    // file's measured length.
+    const stopped = await notes.findById(note.id);
+    expect(stopped).toMatchObject({ status: 'ready', totalChunks: 1 });
+    expect(stopped!.durationMs).toBeLessThan(40_000);
+  });
+
   it('skips pieces saved by an earlier run and carries on', async () => {
     const note = await uploadedNote();
     await segments.upsert({
@@ -353,19 +402,19 @@ describe('upload transcriber', async () => {
     expect(ready!.durationMs).toBeLessThan(60_000);
   });
 
-  it('fails when the note is deleted part way', async () => {
+  it('stops quietly when the note is deleted part way', async () => {
     const note = await uploadedNote();
     // Deleted (and gone) before the second piece is saved.
-    const { transcriber } = setUp(async (_, call) => {
+    const { transcriber, calls, deleted } = setUp(async (_, call) => {
       if (call === 1) await notes.delete(note.id);
       return `text ${call}`;
     });
 
-    const error = await transcriber
-      .transcribe(note, signal())
-      .catch((e: unknown) => e);
+    await transcriber.transcribe(note, signal());
 
-    expect(error).toBeInstanceOf(Error);
+    expect(calls).toHaveLength(2);
     expect(await notes.findById(note.id)).toBeUndefined();
+    // Deleting the note deletes its file; the job leaves that alone.
+    expect(deleted).toEqual([]);
   });
 });

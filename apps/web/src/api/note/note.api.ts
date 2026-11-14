@@ -88,3 +88,15 @@ export async function putFile(
 export function completeUpload(noteId: string) {
   return postData<NoteResponse>(`/notes/${noteId}/upload/complete`);
 }
+
+export function pauseUpload(noteId: string) {
+  return postData<NoteResponse>(`/notes/${noteId}/upload/pause`);
+}
+
+export function resumeUpload(noteId: string) {
+  return postData<NoteResponse>(`/notes/${noteId}/upload/resume`);
+}
+
+export function stopUpload(noteId: string) {
+  return postData<NoteResponse>(`/notes/${noteId}/upload/stop`);
+}

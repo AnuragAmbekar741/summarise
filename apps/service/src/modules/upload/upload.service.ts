@@ -54,15 +54,7 @@ export function createUploadService({
     // The browser says the upload finished. The URL only accepts the signed
     // type and size, so a file being there means it's the right one.
     async complete(userId: string, noteId: string): Promise<PublicNote> {
-      const note = await noteService.getOwnedNote(userId, noteId);
-
-      if (note.source !== 'upload') {
-        throw new HttpError(
-          409,
-          'NOTE_NOT_UPLOAD',
-          'This note is not an upload',
-        );
-      }
+      const note = await getOwnedUpload(userId, noteId);
       // A retried call after the first one went through.
       if (note.status !== 'uploading') return toPublicNote(note);
 
@@ -82,24 +74,102 @@ export function createUploadService({
       }
 
       // Only the call that won queues the note, so it's transcribed once.
-      try {
-        await queue.push(uploaded.id);
-      } catch (error) {
-        // Back to uploading, so a retry of this call can queue it. Otherwise
-        // the note would sit in processing with no job to finish it.
-        logger.error({ err: error, noteId: uploaded.id }, 'upload not queued');
-        await notes.unmarkUploaded(uploaded.id);
-        throw new HttpError(
-          503,
-          'UPLOAD_QUEUE_UNAVAILABLE',
-          "Transcription can't start right now; try again shortly",
-          undefined,
-          { 'Retry-After': String(QUEUE_RETRY_AFTER_SECONDS) },
-        );
-      }
+      // If it can't be queued: back to uploading, so a retry of this call
+      // can queue it. Otherwise the note would sit in processing with no job
+      // to finish it.
+      await queueOrUndo(uploaded.id, () => notes.unmarkUploaded(uploaded.id));
       return toPublicNote(uploaded);
     },
+
+    // Stops transcribing after the piece in progress; Resume carries on.
+    async pause(userId: string, noteId: string): Promise<PublicNote> {
+      const note = await getOwnedUpload(userId, noteId);
+      // A retried call after the first one went through.
+      if (note.status === 'paused') return toPublicNote(note);
+      const paused = await notes.pauseUpload(note.id);
+      if (paused) return toPublicNote(paused);
+      // The worker finished it (or another call paused it) meanwhile.
+      const now = await noteService.getOwnedNote(userId, noteId);
+      if (now.status === 'paused' || now.status === 'ready') {
+        return toPublicNote(now);
+      }
+      throw notTranscribing();
+    },
+
+    // Carries on transcribing a paused upload, or tries a failed one again,
+    // from the pieces already saved.
+    async resume(userId: string, noteId: string): Promise<PublicNote> {
+      const note = await getOwnedUpload(userId, noteId);
+      if (note.status === 'processing') return toPublicNote(note);
+      const resumed = await notes.resumeUpload(note.id);
+      if (!resumed) {
+        throw new HttpError(
+          409,
+          'UPLOAD_NOT_PAUSED',
+          'This upload is not paused',
+        );
+      }
+      // Back as it was (paused or failed), so Resume can be tried again.
+      await queueOrUndo(resumed.id, () =>
+        notes.update(resumed.id, { status: note.status }),
+      );
+      return toPublicNote(resumed);
+    },
+
+    // Ends transcription early: the note is ready with the transcript so
+    // far, and the file is deleted.
+    async stop(userId: string, noteId: string): Promise<PublicNote> {
+      const note = await getOwnedUpload(userId, noteId);
+      if (note.status === 'ready') return toPublicNote(note);
+      const stopped = await notes.stopUpload(note.id);
+      if (!stopped) {
+        // The worker finished it meanwhile: it is ready, which is what Stop
+        // asked for.
+        const now = await noteService.getOwnedNote(userId, noteId);
+        if (now.status === 'ready') return toPublicNote(now);
+        throw notTranscribing();
+      }
+      // The transcript is saved; a file left behind only costs storage.
+      await blob
+        .delete(uploadKey(note.id))
+        .catch((error: unknown) =>
+          logger.error({ err: error, noteId }, 'upload not deleted'),
+        );
+      return toPublicNote(stopped);
+    },
   };
+
+  async function getOwnedUpload(userId: string, noteId: string) {
+    const note = await noteService.getOwnedNote(userId, noteId);
+    if (note.source !== 'upload') {
+      throw new HttpError(409, 'NOTE_NOT_UPLOAD', 'This note is not an upload');
+    }
+    return note;
+  }
+
+  async function queueOrUndo(noteId: string, undo: () => Promise<unknown>) {
+    try {
+      await queue.push(noteId);
+    } catch (error) {
+      logger.error({ err: error, noteId }, 'upload not queued');
+      await undo();
+      throw new HttpError(
+        503,
+        'UPLOAD_QUEUE_UNAVAILABLE',
+        "Transcription can't start right now; try again shortly",
+        undefined,
+        { 'Retry-After': String(QUEUE_RETRY_AFTER_SECONDS) },
+      );
+    }
+  }
+}
+
+function notTranscribing() {
+  return new HttpError(
+    409,
+    'UPLOAD_NOT_TRANSCRIBING',
+    'This upload is not being transcribed',
+  );
 }
 
 export type UploadService = ReturnType<typeof createUploadService>;

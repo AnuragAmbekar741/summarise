@@ -25,5 +25,23 @@ export function createUploadController(uploadService: UploadService) {
       const note = await uploadService.complete(req.userId!, req.params.noteId);
       res.status(200).json({ note });
     },
+
+    async pause(req: Request<{ noteId: string }>, res: Response<NoteResponse>) {
+      const note = await uploadService.pause(req.userId!, req.params.noteId);
+      res.status(200).json({ note });
+    },
+
+    async resume(
+      req: Request<{ noteId: string }>,
+      res: Response<NoteResponse>,
+    ) {
+      const note = await uploadService.resume(req.userId!, req.params.noteId);
+      res.status(200).json({ note });
+    },
+
+    async stop(req: Request<{ noteId: string }>, res: Response<NoteResponse>) {
+      const note = await uploadService.stop(req.userId!, req.params.noteId);
+      res.status(200).json({ note });
+    },
   };
 }

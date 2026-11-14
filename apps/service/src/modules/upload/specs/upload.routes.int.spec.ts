@@ -247,4 +247,67 @@ describe('upload routes', async () => {
       expect(await blob.head(uploadKey(body.note.id))).toBeUndefined();
     });
   });
+
+  describe('pause, resume and stop', () => {
+    // An upload whose file arrived and is being transcribed.
+    async function transcribingUpload() {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes/uploads').send(lecture);
+      const noteId = body.note.id as string;
+      await blob.put(uploadKey(noteId), Buffer.alloc(lecture.size));
+      await agent.post(`/notes/${noteId}/upload/complete`);
+      return { agent, noteId };
+    }
+
+    it('pauses and resumes, queueing the note again', async () => {
+      const { agent, noteId } = await transcribingUpload();
+
+      const paused = await agent.post(`/notes/${noteId}/upload/pause`);
+      expect(paused.status).toBe(200);
+      expect(paused.body.note.status).toBe('paused');
+      // Retried: the same answer.
+      const again = await agent.post(`/notes/${noteId}/upload/pause`);
+      expect(again.body.note.status).toBe('paused');
+
+      await redis.del(queueKey);
+      const resumed = await agent.post(`/notes/${noteId}/upload/resume`);
+      expect(resumed.status).toBe(200);
+      expect(resumed.body.note.status).toBe('processing');
+      expect(await queuedNoteIds()).toEqual([noteId]);
+    });
+
+    it('stops early: ready with the transcript so far, file deleted', async () => {
+      const { agent, noteId } = await transcribingUpload();
+
+      const response = await agent.post(`/notes/${noteId}/upload/stop`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.note).toMatchObject({
+        status: 'ready',
+        totalChunks: 0,
+        durationMs: 0,
+      });
+      expect(await blob.head(uploadKey(noteId))).toBeUndefined();
+    });
+
+    it('refuses to resume an upload that is not paused', async () => {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes/uploads').send(lecture);
+
+      const response = await agent.post(`/notes/${body.note.id}/upload/resume`);
+
+      expect(response.status).toBe(409);
+      expect(response.body.error.code).toBe('UPLOAD_NOT_PAUSED');
+    });
+
+    it('refuses to pause an upload not being transcribed', async () => {
+      const agent = await signUpAgent(app, emails);
+      const { body } = await agent.post('/notes/uploads').send(lecture);
+
+      const response = await agent.post(`/notes/${body.note.id}/upload/pause`);
+
+      expect(response.status).toBe(409);
+      expect(response.body.error.code).toBe('UPLOAD_NOT_TRANSCRIBING');
+    });
+  });
 });

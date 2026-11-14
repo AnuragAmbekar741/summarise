@@ -24,5 +24,23 @@ export function uploadRoutes(
       requireAuth,
       validateParams(NoteParamsSchema),
       controller.complete,
+    )
+    .post(
+      '/:noteId/upload/pause',
+      requireAuth,
+      validateParams(NoteParamsSchema),
+      controller.pause,
+    )
+    .post(
+      '/:noteId/upload/resume',
+      requireAuth,
+      validateParams(NoteParamsSchema),
+      controller.resume,
+    )
+    .post(
+      '/:noteId/upload/stop',
+      requireAuth,
+      validateParams(NoteParamsSchema),
+      controller.stop,
     );
 }

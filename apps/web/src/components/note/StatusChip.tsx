@@ -26,15 +26,25 @@ const STATUSES = {
     label: 'Transcribing',
     dot: 'animate-pulse bg-muted-foreground motion-reduce:animate-none',
   },
+  uploadPaused: { label: 'Paused', dot: 'border-2 border-muted-foreground' },
+  failed: { label: 'Transcription failed', dot: 'bg-destructive' },
 } as const;
 
 // Where the note stands, at the start of the line under the title.
-export function StatusChip({ mode }: { mode: TranscriptMode }) {
+export function StatusChip({
+  mode,
+  detail,
+}: {
+  mode: TranscriptMode;
+  // Shown after the label, e.g. "30%".
+  detail?: string;
+}) {
   const { label, dot } = STATUSES[mode];
   return (
     <span className="inline-flex h-7 items-center gap-2 rounded-full bg-surface-strong px-3 text-caption-upper text-ink uppercase">
       <span aria-hidden className={cn('size-2 rounded-full', dot)} />
       {label}
+      {detail && ` · ${detail}`}
     </span>
   );
 }

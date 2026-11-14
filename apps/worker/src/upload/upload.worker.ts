@@ -22,6 +22,12 @@ type UploadWorkerDeps = {
   // An error from `handle` meaning the provider rejects our setup (the API
   // key, say): every job would fail the same way, so the worker pauses.
   isSetupError?: (error: unknown) => boolean;
+  // An error from `handle` that a retry can't fix (the file has no audio,
+  // say): the note fails straight away.
+  isPermanentError?: (error: unknown) => boolean;
+  // Failed runs in a row before the note is marked failed. Each retry
+  // starts once the failed run's lock expires.
+  maxFailures?: number;
   // Whether the provider accepts our setup now. Throws when it can't tell.
   checkSetup?: () => Promise<'ok' | 'rejected'>;
   // How often to check the setup while paused.
@@ -49,6 +55,8 @@ export function createUploadWorker({
   takeTimeoutSeconds = 5,
   recoverEveryMs = 60_000,
   isSetupError = () => false,
+  isPermanentError = () => false,
+  maxFailures = 5,
   checkSetup,
   checkEveryMs = 5 * 60 * 1000,
 }: UploadWorkerDeps) {
@@ -161,8 +169,10 @@ export function createUploadWorker({
           }
         });
     }, queue.lockMs / 3);
-    // Unfinished, to be carried on later: hand back instead of finishing.
-    let handBack = false;
+    // finish: done with (or given up on). handBack: unfinished, to be taken
+    // again now. leave: untouched, so once its lock expires, recovery puts it
+    // back on the queue.
+    let outcome: 'finish' | 'handBack' | 'leave' = 'finish';
     try {
       const note = await notes.findById(noteId);
       // Deleted, or already done by an earlier copy of this job.
@@ -171,22 +181,51 @@ export function createUploadWorker({
         return;
       }
       await handle(note, controller.signal);
+      // Stopped, but returned rather than threw: handled as a stop below.
+      controller.signal.throwIfAborted();
     } catch (error) {
-      if (isSetupError(error)) {
-        pause();
-        handBack = true;
-      } else if (controller.signal.reason === PAUSED) {
-        handBack = true;
-      } else {
-        // Dropped for now; retries come later.
-        logger.error({ err: error, noteId }, 'upload job failed');
-      }
+      outcome = await afterFailure(queue, noteId, controller.signal, error);
     } finally {
       clearInterval(renewal);
       running.delete(controller);
-      if (handBack) await queue.putBack(job, owner);
-      else await queue.finish(job, owner);
+      if (outcome === 'handBack') await queue.putBack(job, owner);
+      else if (outcome === 'finish') await queue.finish(job, owner);
     }
+  }
+
+  // What to do with a job whose run threw.
+  async function afterFailure(
+    queue: UploadQueue,
+    noteId: string,
+    signal: AbortSignal,
+    error: unknown,
+  ): Promise<'finish' | 'handBack' | 'leave'> {
+    if (isSetupError(error)) {
+      pause();
+      return 'handBack';
+    }
+    if (signal.reason === PAUSED) return 'handBack';
+    // The lock was lost (the computer slept, say). Another worker may have
+    // the job now, so it isn't ours to touch; if nobody does, recovery puts
+    // it back once the lock is free.
+    if (signal.aborted) return 'leave';
+    try {
+      const failures = await queue.countFailure(noteId);
+      if (isPermanentError(error) || failures >= maxFailures) {
+        logger.error({ err: error, noteId, failures }, 'upload job failed');
+        await notes.markUploadFailed(noteId);
+        return 'finish';
+      }
+      logger.warn(
+        { err: error, noteId, failures },
+        'upload job failed; retrying soon',
+      );
+    } catch (trouble) {
+      // Redis or the database is down: retry later, like any failure.
+      logger.error({ err: trouble, noteId }, 'upload job failure not saved');
+    }
+    // Retried once its lock expires, from the pieces already saved.
+    return 'leave';
   }
 
   return {

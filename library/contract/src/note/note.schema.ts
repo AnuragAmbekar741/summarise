@@ -7,12 +7,16 @@ export const NOTE_DESCRIPTION_MAX = 2000;
 export const NoteSourceSchema = z.enum(['recording', 'text', 'upload']);
 
 // A recording: recording → processing (stopped, last chunks still arriving)
-// → ready. An upload: uploading → processing (being transcribed) → ready.
+// → ready. An upload: uploading → processing (being transcribed) → ready;
+// while transcribing it can be paused (and resumed), stopped early (ready
+// with the transcript so far), or fail (and be retried).
 export const NoteStatusSchema = z.enum([
   'recording',
   'processing',
   'ready',
   'uploading',
+  'paused',
+  'failed',
 ]);
 
 export const NoteSchema = z.object({

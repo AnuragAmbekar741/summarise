@@ -14,6 +14,7 @@ import type {
 } from '@summarise/storage';
 
 import { readPieces, type AudioPiece } from '../audio/audio.pieces';
+import { probeDurationMs } from '../audio/ffprobe';
 
 // Long enough for the slowest job: ffmpeg reuses the URL to reconnect.
 const URL_VALID_SECONDS = 6 * 60 * 60;
@@ -43,12 +44,17 @@ type UploadTranscriberDeps = {
   // Injected in tests.
   maxAudioMs?: number;
   wait?: (ms: number, signal: AbortSignal) => Promise<void>;
+  probe?: (source: string) => Promise<number | undefined>;
+  // Called after each piece is saved (to forget earlier failed runs).
+  onPieceSaved?: (noteId: string) => Promise<void>;
 };
 
 // Turns an uploaded file into the note's transcript: each ~30s piece is
 // transcribed and saved as a segment, then the note is marked ready and the
 // file deleted. Pieces saved by an earlier, interrupted run are skipped, so
-// a retried job carries on where the last one stopped.
+// a retried job carries on where the last one stopped. Before each new piece
+// it checks the note is still processing: paused, stopped early or deleted,
+// it stops there.
 export function createUploadTranscriber({
   blob,
   notes,
@@ -56,15 +62,18 @@ export function createUploadTranscriber({
   speechToText,
   maxAudioMs = MAX_AUDIO_MS,
   wait = (ms, signal) => sleep(ms, undefined, { signal }),
+  probe = probeDurationMs,
+  onPieceSaved,
 }: UploadTranscriberDeps) {
   // One piece's text, trying again while the provider is busy. A piece the
   // provider rejects for good is saved as a gap, as with live recording.
+  // Null when the note stopped processing meanwhile; nothing was saved.
   async function transcribePiece(
     note: Note,
     piece: AudioPiece,
     previousText: string,
     signal: AbortSignal,
-  ): Promise<string> {
+  ): Promise<string | null> {
     // Counted apart, so setup retries don't use up the busy ones.
     let setupFailures = 0;
     let busyFailures = 0;
@@ -76,8 +85,7 @@ export function createUploadTranscriber({
           prompt: previousText.slice(-PROMPT_CHARS) || undefined,
           signal,
         });
-        await save(note, piece, text, false, signal);
-        return text;
+        return (await save(note, piece, text, false, signal)) ? text : null;
       } catch (error) {
         if (!(error instanceof SpeechToTextError)) throw error;
         if (error.setupError) {
@@ -91,8 +99,7 @@ export function createUploadTranscriber({
             { err: error, noteId: note.id, seq: piece.seq },
             'piece could not be transcribed',
           );
-          await save(note, piece, '', true, signal);
-          return '';
+          return (await save(note, piece, '', true, signal)) ? '' : null;
         }
         busyFailures++;
         if (busyFailures === MAX_ATTEMPTS) throw error;
@@ -106,15 +113,22 @@ export function createUploadTranscriber({
     }
   }
 
+  async function stillProcessing(noteId: string) {
+    return (await notes.findById(noteId))?.status === 'processing';
+  }
+
   async function save(
     note: Note,
     piece: AudioPiece,
     text: string,
     failed: boolean,
     signal: AbortSignal,
-  ) {
+  ): Promise<boolean> {
     // The lock was lost: another worker may be saving this note now.
     signal.throwIfAborted();
+    // Paused, stopped or deleted while this piece was transcribed: a stopped
+    // note is already ready with the pieces before this one.
+    if (!(await stillProcessing(note.id))) return false;
     await segments.upsert({
       noteId: note.id,
       seq: piece.seq,
@@ -123,12 +137,27 @@ export function createUploadTranscriber({
       rawText: text,
       transcriptionFailed: failed,
     });
+    await onPieceSaved?.(note.id).catch((error: unknown) =>
+      logger.warn({ err: error, noteId: note.id }, 'piece progress not noted'),
+    );
+    return true;
   }
 
   return {
     async transcribe(note: Note, signal: AbortSignal): Promise<void> {
       const key = uploadKey(note.id);
       const url = await blob.presignGet(key, URL_VALID_SECONDS);
+      // The length up front, so the app can show how far it has got
+      // ("18:20 of 60:00"). Replaced by the exact length once done.
+      if (note.durationMs === null) {
+        const durationMs = await probe(url);
+        if (durationMs !== undefined) {
+          await notes.setUploadLength(
+            note.id,
+            Math.min(durationMs, maxAudioMs),
+          );
+        }
+      }
       const saved = new Map(
         (await segments.listByNote(note.id)).map((s) => [s.seq, s]),
       );
@@ -145,9 +174,24 @@ export function createUploadTranscriber({
           break;
         }
         const done = saved.get(piece.seq);
-        previousText = done
+        if (!done && !(await stillProcessing(note.id))) {
+          logger.info(
+            { noteId: note.id, seq: piece.seq },
+            'upload no longer processing; stopped transcribing',
+          );
+          return;
+        }
+        const text = done
           ? textOf(done)
           : await transcribePiece(note, piece, previousText, signal);
+        if (text === null) {
+          logger.info(
+            { noteId: note.id, seq: piece.seq },
+            'upload no longer processing; stopped transcribing',
+          );
+          return;
+        }
+        previousText = text;
         totalChunks = piece.seq + 1;
         durationMs = piece.startMs + piece.durationMs;
       }

@@ -17,11 +17,14 @@ import {
   createTranscriptSegmentRepository,
 } from '@summarise/storage';
 
+import { AudioError } from './audio/audio.errors';
 import { createUploadSweeper } from './upload/upload.sweeper';
 import { createUploadTranscriber } from './upload/upload.transcriber';
 import { createUploadWorker } from './upload/upload.worker';
 
 const SWEEP_EVERY_MS = 4 * 60 * 60 * 1000;
+// Uploads left processing with no job are queued again this often.
+const REQUEUE_EVERY_MS = 5 * 60 * 1000;
 
 // Every upload needs ffmpeg; without it, refuse to start rather than fail
 // each job.
@@ -44,8 +47,10 @@ const blob = createS3BlobStore({
 const notes = createNoteRepository(db);
 logger.info({ redis: await redis.ping() }, 'worker started');
 
-// Once at start, then every 4 hours. A failed sweep is retried on the next one.
-const sweeper = createUploadSweeper({ notes, blob });
+// Once at start, then every 4 hours (requeueing every 5 minutes). Each is
+// retried on its next run if it fails.
+const queue = createUploadQueue(redis);
+const sweeper = createUploadSweeper({ notes, blob, queue });
 async function sweep() {
   try {
     await sweeper.sweep();
@@ -53,14 +58,25 @@ async function sweep() {
     logger.error({ err: error }, 'upload sweep failed');
   }
 }
+async function requeueStuck() {
+  try {
+    await sweeper.requeueStuck();
+  } catch (error) {
+    logger.error({ err: error }, 'requeueing stuck uploads failed');
+  }
+}
 void sweep();
 const sweepTimer = setInterval(sweep, SWEEP_EVERY_MS);
+void requeueStuck();
+const requeueTimer = setInterval(requeueStuck, REQUEUE_EVERY_MS);
 
 const transcriber = createUploadTranscriber({
   blob,
   notes,
   segments: createTranscriptSegmentRepository(db),
   speechToText: createGroqSpeechToText({ apiKey: config.GROQ_API_KEY }),
+  // Progress resets the failure count, so only failed runs in a row add up.
+  onPieceSaved: (noteId) => queue.clearFailures(noteId),
 });
 const worker = createUploadWorker({
   // Each loop waits on its own connection.
@@ -78,6 +94,8 @@ const worker = createUploadWorker({
   // until Groq accepts the setup again.
   isSetupError: (error) =>
     error instanceof SpeechToTextError && error.setupError,
+  // A file with no audio, or not a media file, fails the same way each time.
+  isPermanentError: (error) => error instanceof AudioError && !error.retryable,
   checkSetup: () => checkGroqSetup({ apiKey: config.GROQ_API_KEY }),
 });
 await worker.start();
@@ -93,6 +111,7 @@ async function shutdown(signal: NodeJS.Signals) {
   stopping = true;
   logger.info({ signal }, 'worker stopping');
   clearInterval(sweepTimer);
+  clearInterval(requeueTimer);
   const stopped = await Promise.race([
     worker.stop().then(() => true),
     sleep(STOP_WAIT_MS).then(() => false),

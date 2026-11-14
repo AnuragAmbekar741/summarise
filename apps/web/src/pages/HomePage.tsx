@@ -7,7 +7,7 @@ import { PageGradient } from '@/components/common/PageGradient';
 import { LiveNoteCard } from '@/components/note/LiveNoteCard';
 import { NoteList } from '@/components/note/NoteList';
 import { Button } from '@/components/ui/button';
-import { hasUploadCard, UploadCard } from '@/components/upload/UploadCard';
+import { isUploadInProgress, UploadRow } from '@/components/upload/UploadRow';
 import { UploadDialog } from '@/components/upload/UploadDialog';
 import { useNotes } from '@/hooks/note/useNotes';
 import { useStartNote } from '@/hooks/note/useStartNote';
@@ -24,11 +24,11 @@ export function HomePage() {
   const sendProgress = useUploads().progress;
   const [uploading, setUploading] = useState(false);
 
-  // Uploads still being sent or transcribed get a card of their own.
-  const uploadCards = (notes.data ?? []).filter((note) =>
-    hasUploadCard(note, sendProgress[note.id] !== undefined),
+  // Uploads still being sent or transcribed are listed apart, with controls.
+  const inProgress = (notes.data ?? []).filter((note) =>
+    isUploadInProgress(note, sendProgress[note.id] !== undefined),
   );
-  const carded = new Set(uploadCards.map((note) => note.id));
+  const carded = new Set(inProgress.map((note) => note.id));
   // A note still recording from this browser already has its live card.
   const liveIds = new Set(sessions.map((session) => session.noteId));
   const listed = (notes.data ?? []).filter(
@@ -71,19 +71,27 @@ export function HomePage() {
         </div>
         <UploadDialog open={uploading} onOpenChange={setUploading} />
 
-        {(sessions.length > 0 || uploadCards.length > 0) && (
+        {sessions.length > 0 && (
           <div className="mt-8 space-y-4">
             {sessions.map((session) => (
               <LiveNoteCard key={session.noteId} session={session} />
             ))}
-            {uploadCards.map((note) => (
-              <UploadCard
-                key={note.id}
-                note={note}
-                sendProgress={sendProgress[note.id]}
-              />
-            ))}
           </div>
+        )}
+
+        {inProgress.length > 0 && (
+          <section className="mt-8">
+            <h2 className="font-sans text-caption-upper text-muted-foreground uppercase">
+              In progress
+            </h2>
+            <ul className="mt-3 space-y-1">
+              {inProgress.map((note) => (
+                <li key={note.id}>
+                  <UploadRow note={note} sendProgress={sendProgress[note.id]} />
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {notes.isError && (
@@ -96,7 +104,7 @@ export function HomePage() {
             <NoteList notes={listed} className="mt-8" />
           ) : (
             sessions.length === 0 &&
-            uploadCards.length === 0 && (
+            inProgress.length === 0 && (
               <p className="mt-8 text-body-md text-muted-foreground">
                 No notes yet. Start the notetaker in your next lecture.
               </p>

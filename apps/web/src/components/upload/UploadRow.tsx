@@ -50,7 +50,7 @@ export function UploadRow({
   return (
     // A card lined up with the page's content, the progress bar across its
     // full width.
-    <div className="rounded-xl border border-hairline bg-surface-card px-4 pt-3 pb-4 shadow-soft transition-colors duration-200 focus-within:border-hairline-strong hover:border-hairline-strong">
+    <div className="rounded-xl bg-surface-card px-4 pt-3 pb-4 shadow-soft">
       <div className="flex items-center gap-4">
         <Link
           to={`/notes/${note.id}`}
